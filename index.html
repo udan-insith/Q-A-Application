@@ -7,6 +7,8 @@
   href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;600;700;800&display=swap"
 />
 <style>
+  /* Layout: quiz-show board. Header strip, hero + progress, 7x3 grid of candy number cards (3 columns on phones).
+     A card flips into the question view; a centred result card pops over it; confetti canvas sits on top of everything. */
   :root {
     --night: #0a1440;
     --night-2: #12257a;
@@ -50,19 +52,18 @@
     font-family: var(--f-body);
     font-size: 16px;
     line-height: 1.65;
-    background:
-      radial-gradient(
-        1100px 640px at 50% -8%,
-        #2b49d0 0%,
-        rgba(43, 73, 208, 0) 62%
-      ),
-      linear-gradient(180deg, #12257a 0%, #0a1440 70%) var(--night);
-    background-attachment: fixed;
+    background: var(--night);
     overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   button {
     font: inherit;
     color: inherit;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   :focus-visible {
     outline: 3px solid var(--gold);
@@ -86,11 +87,19 @@
     overflow: hidden;
     z-index: 0;
     pointer-events: none;
+    background:
+      radial-gradient(
+        1100px 640px at 50% -8%,
+        #2b49d0 0%,
+        rgba(43, 73, 208, 0) 62%
+      ),
+      linear-gradient(180deg, #12257a 0%, #0a1440 70%);
   }
   .coin {
     position: absolute;
     bottom: -90px;
     left: var(--x);
+    will-change: transform;
     width: var(--s);
     height: var(--s);
     opacity: 0.2;
@@ -186,9 +195,14 @@
       transform 0.15s,
       background 0.15s;
   }
-  .iconbtn:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.18);
+  @media (hover: hover) {
+    .iconbtn:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.18);
+    }
+  }
+  .iconbtn:active {
+    transform: scale(0.92);
   }
   .iconbtn svg {
     width: 21px;
@@ -361,16 +375,18 @@
     );
     transform: translateX(-120%);
   }
-  .card:not(.done):hover {
-    transform: translateY(-5px) rotate(-1.5deg);
-    box-shadow:
-      0 12px 0 var(--cd),
-      0 24px 28px rgba(0, 0, 0, 0.35),
-      inset 0 2px 0 rgba(255, 255, 255, 0.55);
-  }
-  .card:not(.done):hover::after {
-    transform: translateX(120%);
-    transition: transform 0.6s;
+  @media (hover: hover) {
+    .card:not(.done):hover {
+      transform: translateY(-5px) rotate(-1.5deg);
+      box-shadow:
+        0 12px 0 var(--cd),
+        0 24px 28px rgba(0, 0, 0, 0.35),
+        inset 0 2px 0 rgba(255, 255, 255, 0.55);
+    }
+    .card:not(.done):hover::after {
+      transform: translateX(120%);
+      transition: transform 0.6s;
+    }
   }
   .card:not(.done):active {
     transform: translateY(5px);
@@ -577,10 +593,12 @@
     width: 20px;
     height: 20px;
   }
-  .opt:not(.locked):hover {
-    transform: translateY(-3px);
-    border-color: var(--gold);
-    background: rgba(255, 255, 255, 0.17);
+  @media (hover: hover) {
+    .opt:not(.locked):hover {
+      transform: translateY(-3px);
+      border-color: var(--gold);
+      background: rgba(255, 255, 255, 0.17);
+    }
   }
   .opt:not(.locked):active {
     transform: translateY(2px) scale(0.99);
@@ -752,8 +770,10 @@
       transform 0.12s,
       box-shadow 0.12s;
   }
-  .btn:hover {
-    transform: translateY(-2px);
+  @media (hover: hover) {
+    .btn:hover {
+      transform: translateY(-2px);
+    }
   }
   .btn:active {
     transform: translateY(4px);
@@ -876,10 +896,18 @@
     pointer-events: none;
     overflow: hidden;
     opacity: 0;
-    transition: opacity 0.5s;
+    visibility: hidden;
+    transition:
+      opacity 0.5s,
+      visibility 0s 0.5s;
   }
   .rain.on {
     opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .rain.on i {
+    animation-play-state: running;
   }
   .rain::before {
     content: "";
@@ -901,6 +929,7 @@
     background: linear-gradient(transparent, rgba(160, 205, 255, 0.8));
     animation: rainFall var(--d) linear infinite;
     animation-delay: var(--dl);
+    animation-play-state: paused;
   }
 
   /* mascot */
@@ -921,6 +950,125 @@
   }
   .mascot.sad .face-bg {
     fill: #f0b83a;
+  }
+
+  /* phones: lighter effects, tighter layout */
+  @media (max-width: 640px) {
+    .modal {
+      background: rgba(5, 10, 40, 0.82);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .hero {
+      gap: 12px;
+      margin: 10px 0 8px;
+    }
+    .hero .mascot {
+      width: 72px;
+      height: 72px;
+    }
+    .hero p {
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+    .progress {
+      margin-bottom: 14px;
+    }
+    .board {
+      gap: 12px 10px;
+    }
+    .qpanel {
+      border-radius: 22px;
+    }
+  }
+  @media (max-width: 380px) {
+    .brand small {
+      display: none;
+    }
+    .chip {
+      padding: 2px 12px;
+    }
+    .iconbtn {
+      width: 40px;
+      height: 40px;
+    }
+    .qnum {
+      width: 62px;
+      height: 62px;
+      font-size: 1.8rem;
+    }
+    .opt {
+      padding: 10px 12px;
+      gap: 10px;
+      min-height: 68px;
+      font-size: 1rem;
+    }
+    .opt .let {
+      width: 38px;
+      height: 38px;
+    }
+    .rcard {
+      padding: 24px 16px 18px;
+      border-radius: 26px;
+    }
+    .rcard h2 {
+      font-size: 1.9rem;
+    }
+    .btn {
+      padding: 11px 20px;
+      font-size: 1rem;
+    }
+    .welcome .btn {
+      font-size: 1.1rem;
+      padding: 14px 26px;
+    }
+  }
+  @media (max-height: 560px) and (orientation: landscape) {
+    .rcard {
+      padding: 16px 20px 14px;
+    }
+    .rcard .stage {
+      width: 104px;
+      height: 104px;
+      margin: -4px auto 0;
+    }
+    .rcard .mascot {
+      width: 84px;
+      height: 84px;
+    }
+    .rays {
+      inset: -20px;
+    }
+    .rcard h2 {
+      font-size: 1.6rem;
+    }
+    .rcard p {
+      font-size: 0.95rem;
+    }
+    .actions {
+      margin-top: 12px;
+    }
+    .stars svg {
+      width: 32px;
+      height: 32px;
+    }
+    .rcard .finale-score {
+      font-size: 2.3rem;
+    }
+    .welcome .mascot {
+      width: 84px;
+      height: 84px;
+    }
+    .welcome h2 {
+      font-size: 2rem;
+    }
+    .welcome p {
+      margin-bottom: 12px;
+    }
+    .welcome .btn {
+      padding: 11px 28px;
+      font-size: 1.1rem;
+    }
   }
 
   @keyframes pop {
@@ -1127,7 +1275,7 @@
     <div class="brand">
       <span id="brandMark" aria-hidden="true"></span>
       <div>
-        <b>Q&A Quiz</b>
+        <b>BOC Flex Quiz</b>
         <small>ඩිජිටල් බැංකු ප්‍රශ්නාවලිය</small>
       </div>
     </div>
@@ -1239,7 +1387,7 @@
 </div>
 
 <div class="rain" id="rain" aria-hidden="true"></div>
-<canvas id="fx" aria-hidden="true"></canvas>
+<canvas id="fx" aria-hidden="true" hidden></canvas>
 <div class="toast" id="toast" role="status"></div>
 
 <div
@@ -1635,6 +1783,10 @@
       function init() {
         if (ctx) return;
         try {
+          try {
+            if (navigator.audioSession)
+              navigator.audioSession.type = "playback";
+          } catch (e) {} // lets iPhones play sound even on silent
           ctx = new (window.AudioContext || window.webkitAudioContext)();
           const comp = ctx.createDynamicsCompressor();
           master = ctx.createGain();
@@ -1811,7 +1963,7 @@
         }
       }
       function pump() {
-        while (nextT < ctx.currentTime + 0.18) {
+        while (nextT < ctx.currentTime + 0.25) {
           playStep(step, nextT);
           nextT += SP;
           step = (step + 1) % 128;
@@ -1820,7 +1972,7 @@
       function runMusic() {
         if (!ctx || timer) return;
         nextT = ctx.currentTime + 0.08;
-        timer = setInterval(pump, 30);
+        timer = setInterval(pump, 50);
       }
       function haltMusic() {
         clearInterval(timer);
@@ -1864,7 +2016,13 @@
           if (ctx && ctx.state === "running") ctx.suspend();
         },
         resume() {
-          if (ctx && started && ctx.state === "suspended") ctx.resume();
+          if (
+            ctx &&
+            started &&
+            ctx.state !== "running" &&
+            ctx.state !== "closed"
+          )
+            ctx.resume();
         },
         click() {
           if (!ok()) return;
@@ -1985,17 +2143,25 @@
         H = 0,
         P = [],
         raf = 0;
+      // the canvas stays hidden (and costs nothing) until an effect plays
       function size() {
-        const d = Math.min(2, window.devicePixelRatio || 1);
-        W = innerWidth;
-        H = innerHeight;
-        cv.width = W * d;
-        cv.height = H * d;
+        const w = innerWidth,
+          h = innerHeight;
+        if (w === W && h === H) return;
+        W = w;
+        H = h;
+        const d = Math.min(w < 640 ? 1.5 : 2, window.devicePixelRatio || 1);
+        cv.width = Math.round(w * d);
+        cv.height = Math.round(h * d);
         g.setTransform(d, 0, 0, d, 0, 0);
       }
-      addEventListener("resize", size);
-      size();
+      function show() {
+        cv.hidden = false;
+        size();
+      }
+      const kk = () => (W < 640 ? 0.55 : 1); // fewer particles on phones
       function confetti(x, y, ang, spread, vmin, vmax, n) {
+        n = Math.round(n * kk());
         for (let i = 0; i < n; i++) {
           const a = ang + rnd(-spread, spread),
             s = rnd(vmin, vmax);
@@ -2019,6 +2185,7 @@
         }
       }
       function firework(x, y, n) {
+        n = Math.round(n * kk());
         const c1 = pick(COLORS),
           c2 = pick(COLORS);
         for (let i = 0; i < n; i++) {
@@ -2040,6 +2207,7 @@
         }
       }
       function rainFromTop(n) {
+        n = Math.round(n * kk());
         for (let i = 0; i < n; i++)
           P.push({
             k: Math.random() < 0.25 ? "st" : "r",
@@ -2107,14 +2275,20 @@
           }
         }
         g.globalAlpha = 1;
-        raf = P.length ? requestAnimationFrame(frame) : 0;
-        if (!P.length) g.clearRect(0, 0, W, H);
+        if (P.length) raf = requestAnimationFrame(frame);
+        else {
+          raf = 0;
+          g.clearRect(0, 0, W, H);
+          cv.hidden = true;
+        }
       }
       function kick() {
+        cv.hidden = false;
         if (!raf) raf = requestAnimationFrame(frame);
       }
       return {
         celebrate(big) {
+          show();
           if (reduced) {
             confetti(W / 2, H * 0.35, -Math.PI / 2, 1.2, 3, 6, 36);
             kick();
@@ -2169,11 +2343,19 @@
         if (raw) s = JSON.parse(raw);
       } catch (e) {}
       if (!s) s = memState;
+      const validMap =
+        s &&
+        Array.isArray(s.map) &&
+        s.map.length === TOTAL &&
+        s.map[0] === -1 &&
+        s.map
+          .slice(1)
+          .sort((a, b) => a - b)
+          .every((v, i) => v === i);
       if (
         s &&
         s.v === 1 &&
-        Array.isArray(s.map) &&
-        s.map.length === TOTAL &&
+        validMap &&
         s.opened &&
         typeof s.opened === "object"
       )
@@ -2214,7 +2396,21 @@
     let cur = null,
       busy = false,
       toastT = 0,
-      lastTick = 0;
+      lastTick = 0,
+      finaleIv = 0,
+      timers = [];
+    // timers that must not fire after a reset
+    const later = (fn, ms) => {
+      const id = setTimeout(() => {
+        timers = timers.filter((x) => x !== id);
+        fn();
+      }, ms);
+      timers.push(id);
+    };
+    const clearLater = () => {
+      timers.forEach(clearTimeout);
+      timers = [];
+    };
 
     /* ---------- board ---------- */
     function renderBoard(stampN) {
@@ -2276,6 +2472,7 @@
     }
 
     board.addEventListener("pointerover", (e) => {
+      if (e.pointerType !== "mouse") return; // no hover tick on touch screens
       const c = e.target.closest(".card");
       if (!c || c.classList.contains("done")) return;
       const now = performance.now();
@@ -2300,7 +2497,7 @@
       Snd.click();
       Snd.whoosh();
       c.classList.add("launch");
-      setTimeout(() => {
+      later(() => {
         showQuestion(n);
         busy = false;
       }, 340);
@@ -2308,12 +2505,15 @@
 
     /* ---------- question ---------- */
     const LETTER_COLORS = ["#22c1f1", "#ff9a1f", "#9a6cff", "#ff5d8f"];
-    function showQuestion(n) {
+    function showQuestion(n, savedOrder) {
       const q = n === 0 ? WARMUP : QUESTIONS[state.map[n]];
       state.opened[n] = "seen";
       save();
       updateStats();
-      cur = { n, q, order: shuffle([0, 1, 2, 3]), answered: false };
+      const order = savedOrder || shuffle([0, 1, 2, 3]);
+      cur = { n, q, order, answered: false };
+      state.cur = { n, order };
+      save(); // lets the same question come back if the phone reloads the page
       const qn = $("#qnum");
       qn.textContent = n;
       qn.className = "qnum " + (n === 0 ? "kg" : "k" + (n % 5));
@@ -2385,21 +2585,22 @@
         } else b.classList.add("dim");
       });
       state.opened[cur.n] = ok ? "correct" : "wrong";
+      state.cur = null;
       save();
       updateStats(ok && cur.n > 0);
       Snd.click();
       if (ok) {
-        setTimeout(() => {
+        later(() => {
           Snd.correct();
           FX.celebrate(false);
         }, 150);
-        setTimeout(() => showResult(true), 1050);
+        later(() => showResult(true), 1050);
       } else {
-        setTimeout(() => {
+        later(() => {
           Snd.wrong();
           $("#rain").classList.add("on");
         }, 150);
-        setTimeout(() => showResult(false), 1100);
+        later(() => showResult(false), 1100);
       }
     }
 
@@ -2423,13 +2624,14 @@
       $("#rNext").focus({ preventScroll: true });
     }
     $("#rNext").addEventListener("click", () => {
+      if (!cur) return;
       Snd.click();
       resultEl.hidden = true;
       $("#rain").classList.remove("on");
       const n = cur.n;
       cur = null;
       goHome(n);
-      if (complete()) setTimeout(showFinale, 500);
+      if (complete()) later(showFinale, 500);
     });
     function goHome(stampN) {
       quiz.hidden = true;
@@ -2473,10 +2675,11 @@
       const end = sc;
       out.textContent = "0";
       finaleEl.hidden = false;
-      const iv = setInterval(() => {
+      clearInterval(finaleIv);
+      finaleIv = setInterval(() => {
         v = Math.min(end, v + 5);
         out.textContent = v;
-        if (v >= end) clearInterval(iv);
+        if (v >= end) clearInterval(finaleIv);
       }, 70);
       if (sc >= 30) {
         Snd.fanfare(true);
@@ -2502,6 +2705,12 @@
 
     /* ---------- reset ---------- */
     function resetGame() {
+      clearLater();
+      clearInterval(finaleIv);
+      busy = false;
+      resultEl.hidden = true;
+      finaleEl.hidden = true;
+      $("#rain").classList.remove("on");
       state = fresh({ music: state.music, sfx: state.sfx });
       save();
       quiz.hidden = true;
@@ -2547,8 +2756,32 @@
       Snd.setSfx(state.sfx);
       if (state.sfx) Snd.click();
     });
+    // keep the screen awake during a quiz (ignored where unsupported)
+    let wake = null;
+    function lockScreen() {
+      try {
+        if (!("wakeLock" in navigator) || document.hidden || wake) return;
+        navigator.wakeLock
+          .request("screen")
+          .then((w) => {
+            wake = w;
+            w.addEventListener("release", () => {
+              wake = null;
+            });
+          })
+          .catch(() => {});
+      } catch (e) {}
+    }
     document.addEventListener("visibilitychange", () => {
-      document.hidden ? Snd.pause() : Snd.resume();
+      if (document.hidden) Snd.pause();
+      else {
+        Snd.resume();
+        if (welcomeEl.hidden) lockScreen();
+      }
+    });
+    // phones can suspend audio when switching apps; any tap wakes it again
+    document.addEventListener("pointerdown", () => Snd.resume(), {
+      passive: true,
     });
 
     /* ---------- welcome (needed so the browser lets audio start) ---------- */
@@ -2557,18 +2790,29 @@
       Snd.setSfx(state.sfx);
       Snd.start();
       Snd.click();
+      lockScreen();
       welcomeEl.classList.add("out");
       setTimeout(() => {
         welcomeEl.hidden = true;
       }, 480);
-      if (!reduced) FX.celebrate(false);
+      const sc = state.cur; // page was reloaded mid-question: bring the same question back
+      if (
+        sc &&
+        state.opened[sc.n] === "seen" &&
+        Array.isArray(sc.order) &&
+        sc.order.length === 4 &&
+        [0, 1, 2, 3].every((i) => sc.order.indexOf(i) > -1)
+      ) {
+        setTimeout(() => showQuestion(sc.n, sc.order), 300);
+      } else if (!reduced) FX.celebrate(false);
     });
 
     /* ---------- background decoration ---------- */
     (function () {
       const coins = $("#coins");
       let h = "";
-      for (let i = 0; i < 12; i++)
+      const nc = innerWidth < 640 ? 6 : 12;
+      for (let i = 0; i < nc; i++)
         h +=
           '<span class="coin" style="--x:' +
           rnd(2, 96).toFixed(1) +
