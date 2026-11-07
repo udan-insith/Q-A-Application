@@ -1,0 +1,934 @@
+<title>BOC Flex Quiz</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+Sinhala:wght@400;600;700;800&display=swap">
+<style>
+  /* Layout: quiz-show board. Header strip, hero + progress, 7x3 grid of candy number cards (3 columns on phones).
+     A card flips into the question view; a centred result card pops over it; confetti canvas sits on top of everything. */
+  :root {
+    --night: #0a1440;
+    --night-2: #12257a;
+    --gold: #ffc72c;
+    --gold-deep: #d99100;
+    --cream: #fff6dc;
+    --ink: #14215c;
+    --text: #f5f7ff;
+    --muted: #b4c1f5;
+    --pink: #ff5d8f;
+    --cyan: #22c1f1;
+    --orange: #ff9a1f;
+    --green: #2fd27a;
+    --violet: #9a6cff;
+    --ok: #1fae66;
+    --bad: #e0384d;
+    --glass: rgba(255, 255, 255, .09);
+    --glass-line: rgba(255, 255, 255, .2);
+    --f-display: 'Fredoka', 'Noto Sans Sinhala', 'Nirmala UI', 'Iskoola Pota', system-ui, sans-serif;
+    --f-body: 'Noto Sans Sinhala', 'Nirmala UI', 'Iskoola Pota', 'Segoe UI', system-ui, sans-serif;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    color: var(--text);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.65;
+    background:
+      radial-gradient(1100px 640px at 50% -8%, #2b49d0 0%, rgba(43, 73, 208, 0) 62%),
+      linear-gradient(180deg, #12257a 0%, #0a1440 70%) var(--night);
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 14px 48px;
+  }
+
+  /* floating coins in the background */
+  .coins { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+  .coin {
+    position: absolute; bottom: -90px; left: var(--x);
+    width: var(--s); height: var(--s);
+    opacity: .2;
+    animation: coinRise var(--d) linear infinite; animation-delay: var(--dl);
+  }
+  .coin i {
+    display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffe58a, #ffc72c 55%, #c98400);
+    box-shadow: inset 0 0 0 4px rgba(217, 145, 0, .55);
+    color: rgba(120, 70, 0, .8); font: 700 calc(var(--s) * .34)/1 var(--f-display); font-style: normal;
+    animation: coinSpin 3.2s linear infinite; animation-delay: var(--dl);
+  }
+
+  /* header */
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .brand .mascot { width: 44px; height: 44px; flex: none; }
+  .brand b { display: block; font: 700 1.2rem/1.2 var(--f-display); letter-spacing: .02em; }
+  .brand small { display: block; color: var(--muted); font-size: .78rem; line-height: 1.4; }
+  .tools { display: flex; align-items: center; gap: 8px; }
+  .chip {
+    display: flex; align-items: baseline; gap: 8px;
+    background: var(--glass); border: 1px solid var(--glass-line);
+    border-radius: 999px; padding: 4px 16px; font-size: .85rem; font-weight: 700;
+  }
+  .chip b { font: 700 1.35rem/1.2 var(--f-display); color: var(--gold); font-variant-numeric: tabular-nums; }
+  .chip.bump b { animation: bump .45s; }
+  .iconbtn {
+    position: relative; width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+    display: grid; place-items: center;
+    background: var(--glass); border: 1px solid var(--glass-line); color: var(--text);
+    transition: transform .15s, background .15s;
+  }
+  .iconbtn:hover { transform: translateY(-2px); background: rgba(255, 255, 255, .18); }
+  .iconbtn svg { width: 21px; height: 21px; }
+  .iconbtn[aria-pressed="false"] { color: var(--muted); }
+  .iconbtn[aria-pressed="false"]::after {
+    content: ""; position: absolute; width: 26px; height: 3px; border-radius: 2px;
+    background: var(--bad); transform: rotate(-45deg); box-shadow: 0 0 0 2px var(--night-2);
+  }
+
+  /* hero */
+  .hero { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 18px 0 14px; }
+  .hero .mascot { width: 96px; height: 96px; flex: none; animation: hop 2.2s ease-in-out infinite; }
+  .hero h1 { margin: 0; font: 700 clamp(1.9rem, 4.6vw, 3rem)/1.35 var(--f-display); text-wrap: balance; }
+  .hero h1 em { font-style: normal; color: var(--gold); }
+  .hero p { margin: 2px 0 0; color: var(--muted); max-width: 50ch; font-size: .98rem; }
+
+  .progress { display: flex; align-items: center; gap: 12px; max-width: 520px; margin: 0 auto 20px; font-size: .85rem; font-weight: 700; color: var(--muted); }
+  .progress .track { flex: 1; height: 12px; border-radius: 999px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+  .progress .fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--gold), #ffe27a); transition: width .6s cubic-bezier(.2, .9, .3, 1.2); }
+  .progress b { color: var(--text); font: 700 1rem/1 var(--f-display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .linkbtn { background: none; border: 0; padding: 4px 10px; border-radius: 999px; cursor: pointer; font-weight: 800; color: #3a2500; background: var(--gold); }
+
+  /* number board */
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 12px; }
+  @media (min-width: 640px) { .board { grid-template-columns: repeat(7, 1fr); gap: 16px 14px; } }
+
+  .card {
+    --c: var(--cyan); --cl: #8be4ff; --cd: #0b7fa6;
+    position: relative; overflow: hidden; border: 0; border-radius: 22px; cursor: pointer; color: #fff;
+    aspect-ratio: 1 / 1.1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: linear-gradient(160deg, var(--cl) 0%, var(--c) 58%);
+    box-shadow: 0 7px 0 var(--cd), 0 16px 22px rgba(0, 0, 0, .32), inset 0 2px 0 rgba(255, 255, 255, .55);
+    transition: transform .16s cubic-bezier(.3, 1.6, .5, 1), box-shadow .16s;
+    font-family: var(--f-display);
+  }
+  .k1 { --c: var(--pink); --cl: #ff9ebd; --cd: #b01f55; }
+  .k2 { --c: var(--orange); --cl: #ffcb78; --cd: #b35c00; }
+  .k3 { --c: var(--green); --cl: #8ef0b9; --cd: #14803f; }
+  .k4 { --c: var(--violet); --cl: #c3a8ff; --cd: #5a31b8; }
+  .kg { --c: var(--gold); --cl: #ffeb9c; --cd: var(--gold-deep); color: #5a3600; }
+  .intro .card { animation: pop .6s backwards cubic-bezier(.2, 1.5, .4, 1); animation-delay: calc(var(--i) * 36ms); }
+  .card::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, .55) 50%, transparent 68%);
+    transform: translateX(-120%);
+  }
+  .card:not(.done):hover { transform: translateY(-5px) rotate(-1.5deg); box-shadow: 0 12px 0 var(--cd), 0 24px 28px rgba(0, 0, 0, .35), inset 0 2px 0 rgba(255, 255, 255, .55); }
+  .card:not(.done):hover::after { transform: translateX(120%); transition: transform .6s; }
+  .card:not(.done):active { transform: translateY(5px); box-shadow: 0 2px 0 var(--cd), inset 0 2px 0 rgba(255, 255, 255, .55); }
+  .card .num { font-size: clamp(2.3rem, 6.5vw, 3.3rem); font-weight: 700; line-height: 1; text-shadow: 0 3px 0 rgba(0, 0, 0, .2); }
+  .card .tag { font: 700 .72rem/1.5 var(--f-body); padding: 1px 10px; border-radius: 999px; background: rgba(0, 0, 0, .2); }
+  .kg .tag { background: rgba(90, 54, 0, .18); }
+  .card .badge { display: none; position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; place-items: center; color: #fff; }
+  .card .badge svg { width: 18px; height: 18px; }
+  .card.done {
+    --c: #3b4678; --cl: #4a5690; --cd: #1b234f;
+    color: rgba(255, 255, 255, .5); cursor: not-allowed;
+    box-shadow: 0 4px 0 var(--cd), inset 0 2px 0 rgba(255, 255, 255, .12);
+  }
+  .card.done .num { text-shadow: none; }
+  .card.done .badge { display: grid; }
+  .card.done.ok .badge { background: var(--ok); }
+  .card.done.bad .badge { background: var(--bad); }
+  .card.done.seen .badge { background: #6b76a8; }
+  .card.stamp .badge { animation: stamp .7s cubic-bezier(.2, 1.7, .4, 1); }
+  .card.nope { animation: wobble .45s; }
+  .card.launch { z-index: 3; animation: launch .34s forwards; }
+
+  /* question view */
+  .quiz { max-width: 900px; margin: 12px auto 0; animation: flipIn .55s cubic-bezier(.2, .9, .3, 1.1) both; }
+  .qhead { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .qnum {
+    --c: var(--cyan); --cl: #8be4ff; --cd: #0b7fa6;
+    flex: none; width: 76px; height: 76px; border-radius: 50%;
+    display: grid; place-items: center; color: #fff;
+    font: 700 2.2rem/1 var(--f-display); text-shadow: 0 2px 0 rgba(0, 0, 0, .2);
+    background: radial-gradient(circle at 30% 25%, var(--cl), var(--c) 60%);
+    border: 4px solid rgba(255, 255, 255, .9); box-shadow: 0 6px 0 var(--cd), 0 14px 24px rgba(0, 0, 0, .3);
+  }
+  .qnum.kg { color: #5a3600; text-shadow: none; }
+  .qmeta b { display: block; font: 700 1.3rem/1.4 var(--f-display); }
+  .qmeta span { display: inline-block; margin-top: 2px; padding: 0 12px; border-radius: 999px; font-size: .8rem; font-weight: 800; color: #3a2500; background: var(--gold); }
+  .qpanel {
+    padding: clamp(18px, 3vw, 32px); border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .06));
+    border: 1px solid var(--glass-line); box-shadow: 0 22px 50px rgba(0, 0, 0, .35);
+  }
+  .qtext { margin: 0; outline: 0; font-weight: 800; font-size: clamp(1.25rem, 1.2rem + 1.4vw, 2rem); line-height: 1.6; text-wrap: pretty; }
+  .opts { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
+  @media (min-width: 760px) { .opts { grid-template-columns: 1fr 1fr; } }
+  .opt {
+    position: relative; display: flex; align-items: center; gap: 14px; min-width: 0;
+    min-height: 76px; padding: 12px 16px; text-align: left; cursor: pointer;
+    border-radius: 20px; border: 2px solid var(--glass-line); background: rgba(255, 255, 255, .09);
+    font-weight: 600; font-size: 1.05rem; line-height: 1.55;
+    transition: transform .15s, border-color .15s, background .15s, opacity .3s;
+    animation: slideUp .5s backwards cubic-bezier(.2, .9, .3, 1.2); animation-delay: calc(var(--k) * 90ms + 180ms);
+  }
+  .opt .let {
+    flex: none; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center;
+    font: 700 1.3rem/1 var(--f-display); color: #fff; background: var(--lc); box-shadow: 0 3px 0 rgba(0, 0, 0, .28);
+  }
+  .opt .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .opt .mark { display: none; flex: none; width: 34px; height: 34px; border-radius: 50%; place-items: center; background: rgba(255, 255, 255, .95); }
+  .opt .mark svg { width: 20px; height: 20px; }
+  .opt:not(.locked):hover { transform: translateY(-3px); border-color: var(--gold); background: rgba(255, 255, 255, .17); }
+  .opt:not(.locked):active { transform: translateY(2px) scale(.99); }
+  .opt.locked { cursor: default; }
+  .opt.dim { opacity: .4; }
+  .opt.right { background: linear-gradient(135deg, #159a58, #2fd27a); border-color: #c9ffe0; color: #fff; animation: rightPulse .7s; }
+  .opt.wrong { background: linear-gradient(135deg, #c42a3f, #ff4d5e); border-color: #ffd0d5; color: #fff; animation: shake .5s; }
+  .opt.right .mark, .opt.wrong .mark { display: grid; }
+  .opt.right .mark { color: var(--ok); }
+  .opt.wrong .mark { color: var(--bad); }
+  .hint { margin: 16px 0 0; text-align: center; color: var(--muted); font-size: .8rem; }
+  @media (hover: none) { .hint { display: none; } }
+
+  /* modals */
+  .modal {
+    position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+    padding: 16px max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    background: rgba(5, 10, 40, .62); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    animation: fade .3s; overflow-y: auto;
+  }
+  .rcard {
+    position: relative; width: min(440px, 100%); margin: auto; text-align: center; color: var(--ink);
+    padding: 30px 24px 24px; border-radius: 32px; background: var(--cream);
+    box-shadow: 0 8px 0 rgba(0, 0, 0, .18), 0 30px 60px rgba(0, 0, 0, .45);
+    animation: modalIn .55s cubic-bezier(.2, 1.4, .4, 1);
+  }
+  .rcard.bad { background: #e3e9ff; }
+  .rcard .stage { position: relative; width: 168px; height: 168px; margin: -6px auto 4px; display: grid; place-items: center; }
+  .rcard .mascot { position: relative; width: 132px; height: 132px; animation: mascotIn .7s cubic-bezier(.2, 1.7, .4, 1); }
+  .rcard.bad .mascot { animation: mascotIn .7s cubic-bezier(.2, 1.7, .4, 1), sway 2.6s ease-in-out .7s infinite; }
+  .rays {
+    position: absolute; inset: -34px; border-radius: 50%; animation: spin 14s linear infinite;
+    background: repeating-conic-gradient(from 0deg, rgba(255, 199, 44, .55) 0 10deg, transparent 10deg 30deg);
+    -webkit-mask: radial-gradient(circle, transparent 28%, #000 30%, transparent 72%);
+    mask: radial-gradient(circle, transparent 28%, #000 30%, transparent 72%);
+  }
+  .rcard h2 { margin: 0; font: 700 2.2rem/1.4 var(--f-display); }
+  .rcard.ok h2 { color: var(--ok); }
+  .rcard.bad h2 { color: var(--bad); }
+  .rcard p { margin: 4px 0 0; font-size: 1.05rem; font-weight: 600; }
+  .answerbox { margin: 14px 0 0; padding: 10px 14px; border-radius: 16px; background: #fff; border: 2px solid #b9c6ff; text-align: left; }
+  .answerbox small { display: block; font-weight: 800; color: #5a6bb8; font-size: .78rem; }
+  .answerbox span { display: block; font-weight: 800; color: var(--ink); line-height: 1.5; }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+  .btn {
+    border: 0; cursor: pointer; padding: 12px 26px; border-radius: 999px;
+    font: 700 1.1rem/1.5 var(--f-display); color: #3a2500; background: var(--gold);
+    box-shadow: 0 5px 0 var(--gold-deep), 0 10px 18px rgba(0, 0, 0, .2);
+    transition: transform .12s, box-shadow .12s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--gold-deep); }
+  .btn.ghost { background: #fff; color: var(--ink); box-shadow: 0 5px 0 #b9c6ff, 0 10px 18px rgba(0, 0, 0, .15); }
+  .btn.danger { background: var(--bad); color: #fff; box-shadow: 0 5px 0 #8f1a29; }
+
+  .rcard .finale-score { margin: 0; font: 700 3.6rem/1.2 var(--f-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  .rcard .finale-score small { font-size: 1.5rem; color: #5a6bb8; }
+  .stars { display: flex; justify-content: center; gap: 6px; margin: 4px 0 6px; }
+  .stars svg { width: 46px; height: 46px; }
+  .stars .on { animation: starPop .6s backwards cubic-bezier(.2, 1.8, .4, 1); animation-delay: calc(var(--s) * 280ms + 400ms); }
+
+  .welcome { z-index: 80; background: rgba(8, 14, 56, .8); text-align: center; }
+  .welcome .inner { margin: auto; max-width: 520px; animation: modalIn .7s cubic-bezier(.2, 1.4, .4, 1); }
+  .welcome .mascot { width: 150px; height: 150px; animation: hop 2s ease-in-out infinite; }
+  .welcome h2 { margin: 10px 0 0; font: 700 clamp(2.2rem, 7vw, 3.4rem)/1.2 var(--f-display); }
+  .welcome h2 em { font-style: normal; color: var(--gold); }
+  .welcome p { margin: 6px 0 22px; color: var(--muted); }
+  .welcome .btn { font-size: 1.3rem; padding: 16px 38px; animation: btnPulse 1.6s infinite; }
+  .welcome.out { animation: fadeOut .45s forwards; pointer-events: none; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: max(26px, env(safe-area-inset-bottom, 0px)); z-index: 70;
+    transform: translate(-50%, 30px); opacity: 0; pointer-events: none; max-width: calc(100% - 32px);
+    padding: 10px 20px; border-radius: 999px; font-weight: 700; text-align: center;
+    background: #fff; color: var(--ink); box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+    transition: transform .3s cubic-bezier(.2, 1.5, .4, 1), opacity .25s;
+  }
+  .toast.on { transform: translate(-50%, 0); opacity: 1; }
+
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 90; pointer-events: none; }
+
+  /* sad rain */
+  .rain { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .5s; }
+  .rain.on { opacity: 1; }
+  .rain::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, rgba(10, 20, 80, 0) 15%, rgba(8, 16, 70, .6) 100%); }
+  .rain i {
+    position: absolute; top: -40px; left: var(--x); width: 2px; height: 22px; border-radius: 2px;
+    background: linear-gradient(transparent, rgba(160, 205, 255, .8));
+    animation: rainFall var(--d) linear infinite; animation-delay: var(--dl);
+  }
+
+  /* mascot */
+  .mascot { display: block; overflow: visible; }
+  .mascot .eyes { transform-box: fill-box; transform-origin: center; animation: blink 4.5s infinite; }
+  .mascot .tear { animation: tear 1.6s ease-in infinite; }
+  .mascot .tear.b { animation-delay: .8s; }
+  .mascot.sad .face-bg { fill: #f0b83a; }
+
+  @keyframes pop { from { transform: scale(.2) rotate(-12deg); opacity: 0; } }
+  @keyframes wobble { 20% { transform: translateX(-7px) rotate(-3deg); } 45% { transform: translateX(7px) rotate(3deg); } 70% { transform: translateX(-4px); } }
+  @keyframes launch { to { transform: scale(1.3) rotate(8deg); opacity: .2; } }
+  @keyframes stamp { from { transform: scale(3) rotate(-30deg); opacity: 0; } }
+  @keyframes flipIn { from { transform: perspective(900px) rotateY(-80deg) scale(.8); opacity: 0; } }
+  @keyframes slideUp { from { transform: translateY(26px) scale(.96); opacity: 0; } }
+  @keyframes shake { 15% { transform: translateX(-10px); } 35% { transform: translateX(9px); } 55% { transform: translateX(-6px); } 75% { transform: translateX(4px); } }
+  @keyframes rightPulse { 0% { transform: scale(1); } 35% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  @keyframes hop { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-10px) rotate(3deg); } }
+  @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+  @keyframes tear { 0% { transform: translateY(-4px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(24px); opacity: 0; } }
+  @keyframes sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes bump { 40% { transform: scale(1.5); } }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes fadeOut { to { opacity: 0; visibility: hidden; } }
+  @keyframes modalIn { from { transform: scale(.6) translateY(40px); opacity: 0; } }
+  @keyframes mascotIn { from { transform: scale(0) rotate(-40deg); } }
+  @keyframes starPop { from { transform: scale(0) rotate(-90deg); opacity: 0; } }
+  @keyframes btnPulse { 0% { box-shadow: 0 5px 0 var(--gold-deep), 0 0 0 0 rgba(255, 199, 44, .7); } 70%, 100% { box-shadow: 0 5px 0 var(--gold-deep), 0 0 0 22px rgba(255, 199, 44, 0); } }
+  @keyframes coinRise { from { transform: translateY(0); } to { transform: translateY(-125vh); } }
+  @keyframes coinSpin { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+  @keyframes rainFall { from { transform: translateY(0); } to { transform: translateY(115vh); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .coins { display: none; }
+  }
+</style>
+
+<div class="coins" id="coins" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header class="bar">
+    <div class="brand">
+      <span id="brandMark" aria-hidden="true"></span>
+      <div>
+        <b>BOC Flex Quiz</b>
+        <small>ඩිජිටල් බැංකු ප්‍රශ්නාවලිය</small>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="chip" id="scoreChip" title="ලකුණු">ලකුණු <b id="score">0</b></div>
+      <button class="iconbtn" id="musicBtn" type="button" aria-pressed="true" aria-label="සංගීතය" title="සංගීතය">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="3"/><circle cx="17.5" cy="16" r="3"/></svg>
+      </button>
+      <button class="iconbtn" id="sfxBtn" type="button" aria-pressed="true" aria-label="ශබ්ද ඵල" title="ශබ්ද ඵල">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      </button>
+      <button class="iconbtn" id="resetBtn" type="button" aria-label="නැවත ආරම්භ කරන්න" title="නැවත ආරම්භ කරන්න">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section id="home">
+      <div class="hero">
+        <span id="heroMascot" aria-hidden="true"></span>
+        <div>
+          <h1><em>අංකයක්</em> තෝරන්න</h1>
+          <p>0 සිට 20 දක්වා කාඩ්පතක් ඔබා ප්‍රශ්නයක් ලබාගන්න. එක් අංකයක් විවෘත කළ හැක්කේ එක් වරක් පමණි. 0 යනු පුහුණු ප්‍රශ්නයයි.</p>
+        </div>
+      </div>
+      <div class="progress">
+        <span>විවෘත කළ අංක</span>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <b id="openedTxt">0 / 21</b>
+        <button class="linkbtn" id="seeResult" type="button" hidden>ප්‍රතිඵලය</button>
+      </div>
+      <div class="board intro" id="board"></div>
+    </section>
+
+    <section id="quiz" class="quiz" hidden>
+      <div class="qhead">
+        <div class="qnum" id="qnum">7</div>
+        <div class="qmeta"><b id="qlabel">ප්‍රශ්නය 7</b><span id="qpts">ලකුණු 5</span></div>
+      </div>
+      <div class="qpanel">
+        <h2 class="qtext" id="qtext" tabindex="-1"></h2>
+        <div class="opts" id="opts"></div>
+      </div>
+      <p class="hint">පිළිතුර තෝරන්න. යතුරුපුවරුවෙන් 1 - 4 හෝ A - D ද ඔබන්න.</p>
+    </section>
+  </main>
+</div>
+
+<div class="rain" id="rain" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="toast" id="toast" role="status"></div>
+
+<div class="modal" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="rTitle">
+  <div class="rcard ok" id="rcard">
+    <div class="stage"><div class="rays" id="rays"></div><span id="rMascot"></span></div>
+    <h2 id="rTitle"></h2>
+    <p id="rSub"></p>
+    <div class="answerbox" id="rAnswer" hidden><small>නිවැරදි පිළිතුර</small><span id="rAnswerTxt"></span></div>
+    <div class="actions"><button class="btn" id="rNext" type="button">ඊළඟ අංකය තෝරන්න</button></div>
+  </div>
+</div>
+
+<div class="modal" id="finale" hidden role="dialog" aria-modal="true" aria-labelledby="fTitle">
+  <div class="rcard ok">
+    <div class="stage"><div class="rays"></div><span id="fMascot"></span></div>
+    <h2 id="fTitle">සුභ පැතුම්!</h2>
+    <div class="stars" id="fStars"></div>
+    <p class="finale-score"><span id="fScore">0</span> <small>/ 100</small></p>
+    <p id="fCorrect"></p>
+    <p id="fMsg"></p>
+    <div class="actions">
+      <button class="btn" id="fAgain" type="button">නැවත සෙල්ලම් කරන්න</button>
+      <button class="btn ghost" id="fClose" type="button">ආපසු</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="cTitle">
+  <div class="rcard bad">
+    <h2 id="cTitle" style="font-size:1.6rem">ක්‍රීඩාව නැවත ආරම්භ කරන්නද?</h2>
+    <p>සියලු ලකුණු සහ විවෘත කළ අංක මැකී යයි.</p>
+    <div class="actions">
+      <button class="btn ghost" id="cNo" type="button">නැහැ</button>
+      <button class="btn danger" id="cYes" type="button">ඔව්, නැවත ආරම්භ කරන්න</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+  <div class="inner">
+    <span id="wMascot" aria-hidden="true"></span>
+    <h2 id="wTitle">BOC <em>Flex</em> Quiz</h2>
+    <p>ඩිජිටල් බැංකු ප්‍රශ්නාවලිය. හොඳම අත්දැකීම සඳහා ශබ්දය සක්‍රීය කරන්න.</p>
+    <button class="btn" id="wStart" type="button">සෙල්ලම ආරම්භ කරන්න</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  document.documentElement.lang = 'si';
+
+  /* ---------- questions (from the supplied BOC question set) ---------- */
+  // o = options in original order (A-D); a = index of the correct option.
+  const WARMUP = {
+    q: 'ලංකා බැංකුවේ ප්‍රධාන කාර්යාලය පිහිටා ඇත්තේ කොහේද?',
+    o: ['මහනුවර', 'ගාල්ල', 'කොළඹ', 'අනුරාධපුරය'], a: 2
+  };
+  const QUESTIONS = [
+    { q: 'ශිෂ්‍යයෙකුට මුදල් ඉතිරි කිරීමේ ප්‍රධාන වාසිය කුමක්ද?',
+      o: ['අනවශ්‍ය වියදම් වැඩි කරගැනීම.', 'අනාගත අවශ්‍යතා සඳහා මුදල් සූදානම් කරගැනීම.', 'මුදල් සියල්ල එකවර වියදම් කිරීම.', 'ණය මත යැපීම.'], a: 1 },
+    { q: 'මාසිකව ලැබෙන මුදලක් හොඳින් කළමනාකරණය කිරීමට සුදුසුම ක්‍රමය කුමක්ද?',
+      o: ['සියලු මුදල් වහාම වියදම් කිරීම.', 'වියදම් සැලසුම් කර කොටසක් ඉතිරි කිරීම.', 'මිතුරන්ට සියල්ල ලබාදීම.', 'කිසිදු සැලැස්මක් නොමැතිව වියදම් කිරීම.'], a: 1 },
+    { q: 'ඉතුරුම් ගිණුමක ප්‍රධාන අරමුණ කුමක්ද?',
+      o: ['මුදල් ආරක්ෂිතව තැන්පත් කර අවශ්‍ය විට භාවිතයට ගැනීම.', 'මුදල් නාස්ති කිරීම.', 'ණය ලබාගැනීම පමණක්.', 'බිල්පත් මුද්‍රණය කිරීම.'], a: 0 },
+    { q: 'ස්ථාවර තැන්පතුවක් (Fixed Deposit) යනු කුමක්ද?',
+      o: ['දිනපතා මුදල් ආපසු ගන්නා කාඩ්පතකි.', 'නියමිත කාලයක් සඳහා මුදල් තැන්පත් කර පොලී ආදායමක් ලබාගැනීමේ ක්‍රමයකි.', 'ණය කාඩ්පතකි.', 'මුදල් හුවමාරු යන්ත්‍රයකි.'], a: 1 },
+    { q: 'BOC හි නව පරම්පරාවේ ජංගම බැංකුකරණ යෙදුම හඳුන්වන්නේ කුමන නමින්ද?',
+      o: ['BOC Smart Passbook', 'BOC Flex', 'BOC Connect', 'BOC Travel'], a: 1 },
+    { q: 'BOC Flex යෙදුම ප්‍රධාන වශයෙන් භාවිත කරන්නේ කුමක් සඳහාද?',
+      o: ['ජංගම දුරකථනය හරහා බැංකු සේවා ලබාගැනීමට.', 'පාසල් විභාග සඳහා ලියාපදිංචි වීමට.', 'රූපවාහිනී වැඩසටහන් නැරඹීමට.', 'ගමන් බලපත්‍ර නිකුත් කිරීමට.'], a: 0 },
+    { q: 'BOC Flex යෙදුමට පිවිසීමේදී සහාය වන ජෛවමිතික ආරක්ෂණ ක්‍රමයක් කුමක්ද?',
+      o: ['ඇඟිලි සලකුණ හෝ මුහුණු හඳුනාගැනීම.', 'වාහන අංකය.', 'පාසල් හැඳුනුම්පත් අංකය.', 'තැපැල් කේතය.'], a: 0 },
+    { q: 'BOC Flex මඟින් පාරිභෝගිකයෙකුට කළ හැකි කාර්යයක් කුමක්ද?',
+      o: ['ගිණුම් ශේෂය පරීක්ෂා කිරීම.', 'විභාග ප්‍රතිඵල වෙනස් කිරීම.', 'රියදුරු බලපත්‍ර නිකුත් කිරීම.', 'ජාතික හැඳුනුම්පත් මුද්‍රණය කිරීම.'], a: 0 },
+    { q: 'BOC Flex මඟින් සිදුකළ හැකි ගෙවීමක් කුමක්ද?',
+      o: ['බිල්පත් ගෙවීම.', 'පාසල් පැමිණීම සටහන් කිරීම.', 'විභාග පත්‍රිකා පරීක්ෂා කිරීම.', 'වාහන ලියාපදිංචි කිරීම.'], a: 0 },
+    { q: 'BOC Flex යෙදුමෙන් ජංගම දුරකථන සම්බන්ධයෙන් කළ හැකි සේවාව කුමක්ද?',
+      o: ['ජංගම දුරකථන රීලෝඩ් කිරීම.', 'දුරකථන අලුත්වැඩියා කිරීම.', 'නව SIM කාඩ්පත් නිෂ්පාදනය කිරීම.', 'දුරකථන අංක නිකුත් කිරීම.'], a: 0 },
+    { q: 'BOC Flex යෙදුමෙන් QR ගෙවීමක් සිදුකිරීමේදී භාවිත කළ හැකි ක්‍රමය කුමක්ද?',
+      o: ['LankaQR කේතය පරිලෝකනය කර ගෙවීම සිදුකිරීම.', 'ATM යන්ත්‍රයට කඩදාසියක් ඇතුළත් කිරීම.', 'විද්‍යුත් තැපෑලක් මුද්‍රණය කිරීම.', 'බැංකු පොතක් යැවීම.'], a: 0 },
+    { q: 'BOC Flex හි වියදම් නිරීක්ෂණ (Expense Tracker) පහසුකමෙන් ප්‍රයෝජන ගත හැක්කේ කෙසේද?',
+      o: ['තම වියදම් නිරීක්ෂණය කර වියදම් රටාව අවබෝධ කරගැනීමට.', 'විභාග ලකුණු ගණනය කිරීමට.', 'මිතුරන්ගේ දුරකථන අංක සොයාගැනීමට.', 'ATM යන්ත්‍ර සොයාගැනීමට.'], a: 0 },
+    { q: 'BOC Flex හි Payment Reminders පහසුකමේ අරමුණ කුමක්ද?',
+      o: ['නියමිත ගෙවීම් මතක් කරදීමට.', 'ගිණුම ස්වයංක්‍රීයව වසා දැමීමට.', 'කාඩ්පත මුද්‍රණය කිරීමට.', 'ණය පොලී අනුපාත වෙනස් කිරීමට.'], a: 0 },
+    { q: 'BOC Flex Banking හි ප්‍රධාන වාසියක් කුමක්ද?',
+      o: ['බැංකු සේවා ලබාගැනීමට සෑම විටම ශාඛාවට යාම අවශ්‍ය වීම.', 'ඩිජිටල් මාර්ගයෙන් පහසු සහ කාලය ඉතිරි කරන බැංකු සේවා ලබාගැනීම.', 'ගනුදෙනු වාර්තා නොමැති වීම.', 'මුදල් පමණක් භාවිත කළ හැකි වීම.'], a: 1 },
+    { q: 'BOC Flex Tap & Pay මඟින් ගෙවීමක් සිදුකරන්නේ කෙසේද?',
+      o: ['NFC පහසුකම සහිත POS යන්ත්‍රයකට දුරකථනය ළං කර ගෙවීම තහවුරු කිරීමෙන්.', 'දුරකථනයෙන් බැංකු නෝට්ටුවක් මුද්‍රණය කිරීමෙන්.', 'ATM කාඩ්පත තැපැල් කිරීමෙන්.', 'විද්‍යුත් තැපෑලක් යැවීමෙන්.'], a: 0 },
+    { q: 'OTP (One-Time Password) යනු කුමක්ද?',
+      o: ['නිශ්චිත සත්‍යාපන කටයුත්තක් සඳහා භාවිත කරන තාවකාලික ආරක්ෂක කේතයකි.', 'සියලු දෙනාටම පොදු මුරපදයකි.', 'බැංකු ගිණුම් අංකයකි.', 'ATM යන්ත්‍රයේ ස්ථානයකි.'], a: 0 },
+    { q: 'ඔබගේ BOC Flex මුරපදය හෝ OTP අංකය වෙනත් අයෙකු ඉල්ලා සිටියහොත් කළ යුත්තේ කුමක්ද?',
+      o: ['ඔවුන්ට ලබාදීම.', 'සමාජ මාධ්‍යයේ පළ කිරීම.', 'කිසිවෙකුට ලබා නොදී රහසිගතව තබාගැනීම.', 'මිතුරන් කිහිපදෙනෙකුට යැවීම.'], a: 2 },
+    { q: 'BOC නමින් ලැබෙන සැක සහිත SMS සබැඳියක් (Link) පිළිබඳව කළ යුතු නිවැරදි ක්‍රියාව කුමක්ද?',
+      o: ['වහාම විවෘත කර මුරපදය ඇතුළත් කිරීම.', 'සබැඳිය විවෘත නොකර නිල BOC නාලිකාවක් හරහා තොරතුරු තහවුරු කිරීම.', 'එය සියලු මිතුරන්ට යැවීම.', 'බැංකු තොරතුරු එම සබැඳියට ඇතුළත් කිරීම.'], a: 1 },
+    { q: 'Phishing යනු කුමක්ද?',
+      o: ['ව්‍යාජ පණිවිඩ හෝ වෙබ් අඩවි මඟින් පුද්ගලික තොරතුරු සොරකම් කිරීමට උත්සාහ කිරීම.', 'බැංකුවේ මුදල් තැන්පත් කිරීම.', 'QR කේතයක් පරිලෝකනය කිරීම.', 'ඉතුරුම් ගිණුමක් විවෘත කිරීම.'], a: 0 },
+    { q: 'BOC Flex භාවිත කරන විට ආරක්ෂාව වැඩි කිරීමට සුදුසු පුරුද්ද කුමක්ද?',
+      o: ['දුරකථනයේ තිර අගුල සහ ජෛවමිතික ආරක්ෂාව භාවිත කිරීමත්, යෙදුම යාවත්කාලීනව තබාගැනීමත්.', 'මුරපදය දුරකථනයේ පිටත ලියා තැබීම.', 'OTP අංකය අන් අයට ලබාදීම.', 'නොදන්නා යෙදුම් ස්ථාපනය කිරීම.'], a: 0 }
+  ];
+  const TOTAL = 21, POINTS = 5, MAX_SCORE = 100;
+
+  /* ---------- helpers ---------- */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  const ICON = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    dots: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="6" cy="12" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="18" cy="12" r="2.2"/></svg>',
+    star: '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.5l-6 3.4 1.3-6.7-5-4.7 6.8-.8z" fill="CLR" stroke="STR" stroke-width="1.4" stroke-linejoin="round"/></svg>'
+  };
+
+  /* ---------- mascot (coin character) ---------- */
+  function mascot(mood) {
+    const sad = mood === 'sad';
+    const eyes = sad
+      ? '<g class="eyes"><ellipse cx="37" cy="46" rx="5.5" ry="7.5" fill="#2a1a00"/><ellipse cx="63" cy="46" rx="5.5" ry="7.5" fill="#2a1a00"/><circle cx="39" cy="43" r="2.6" fill="#fff"/><circle cx="65" cy="43" r="2.6" fill="#fff"/><ellipse cx="37" cy="51" rx="6.5" ry="2.4" fill="#5ec8ff" opacity=".85"/><ellipse cx="63" cy="51" rx="6.5" ry="2.4" fill="#5ec8ff" opacity=".85"/></g>'
+      : '<g class="eyes"><ellipse cx="37" cy="44" rx="5" ry="7" fill="#2a1a00"/><ellipse cx="63" cy="44" rx="5" ry="7" fill="#2a1a00"/><circle cx="39" cy="41" r="2.2" fill="#fff"/><circle cx="65" cy="41" r="2.2" fill="#fff"/></g>';
+    const face = sad
+      ? '<path d="M27 38 L45 31" stroke="#2a1a00" stroke-width="3.4" stroke-linecap="round"/><path d="M73 38 L55 31" stroke="#2a1a00" stroke-width="3.4" stroke-linecap="round"/>' +
+        '<path d="M35 72 Q50 56 65 72" fill="none" stroke="#7a1f1f" stroke-width="4.2" stroke-linecap="round"/>' +
+        '<path class="tear" d="M31 54 q-5 8 0 11 q5 -3 0 -11z" fill="#5ec8ff"/><path class="tear b" d="M69 54 q-5 8 0 11 q5 -3 0 -11z" fill="#5ec8ff"/>'
+      : '<circle cx="26" cy="58" r="6" fill="#ff7a8a" opacity=".6"/><circle cx="74" cy="58" r="6" fill="#ff7a8a" opacity=".6"/>' +
+        '<path d="M32 57 Q50 82 68 57 Z" fill="#7a1f1f"/><path d="M41 69 Q50 63 59 69 Q50 77 41 69Z" fill="#ff7a8a"/>';
+    return '<svg class="mascot ' + mood + '" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<circle cx="50" cy="50" r="47" fill="#d99100"/><circle class="face-bg" cx="50" cy="50" r="42" fill="#ffc72c"/>' +
+      '<circle cx="50" cy="50" r="36" fill="none" stroke="#e8a300" stroke-width="2" stroke-dasharray="3 3.4"/>' +
+      '<ellipse cx="33" cy="24" rx="14" ry="6" fill="#fff" opacity=".4" transform="rotate(-25 33 24)"/>' +
+      eyes + face + '</svg>';
+  }
+
+  /* ---------- audio: everything is synthesised, no files needed ---------- */
+  const Snd = (function () {
+    let ctx = null, master, musicBus, sfxBus, leadBus, noiseBuf;
+    let musicOn = true, sfxOn = true, started = false, timer = null, step = 0, nextT = 0;
+    const BPM = 104, SP = 60 / BPM / 4;
+    const NOTE = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+    const mf = n => { const m = /^([A-G])(#|b)?(\d)$/.exec(n); const s = NOTE[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); return 440 * Math.pow(2, (12 * (+m[3] + 1) + s - 69) / 12); };
+    const CH = [['C4', 'E4', 'G4'], ['A3', 'C4', 'E4'], ['F3', 'A3', 'C4'], ['G3', 'B3', 'D4']];
+    const BASS = ['C3', 'A2', 'F2', 'G2'];
+    const A1 = [0, 1, 2, 1, 0, 1, 2, 1], A2 = [0, 2, 1, 2, 0, 2, 1, 2];
+    const MEL = [
+      ['E5', 'G5', 'E5', 'C5', 'D5', 'E5', 'G5', 'E5'], ['C5', 'E5', 'A5', 'E5', 'C5', 'E5', 'D5', 'C5'],
+      ['A4', 'C5', 'F5', 'C5', 'A4', 'C5', 'E5', 'C5'], ['B4', 'D5', 'G5', 'D5', 'B4', 'D5', 'F5', 'D5'],
+      ['G5', 'E5', 'G5', 'A5', 'G5', 'E5', 'D5', 'C5'], ['E5', 'C5', 'E5', 'A5', 'G5', 'E5', 'C5', null],
+      ['F5', 'A5', 'C6', 'A5', 'F5', 'E5', 'F5', 'A5'], ['G5', 'F5', 'D5', 'B4', 'D5', 'G5', null, null]
+    ];
+
+    function init() {
+      if (ctx) return;
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const comp = ctx.createDynamicsCompressor();
+        master = ctx.createGain(); master.gain.value = .9; master.connect(comp); comp.connect(ctx.destination);
+        musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? .5 : 0; musicBus.connect(master);
+        sfxBus = ctx.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+        leadBus = ctx.createGain(); leadBus.connect(musicBus);
+        const dl = ctx.createDelay(1); dl.delayTime.value = SP * 3;
+        const fb = ctx.createGain(); fb.gain.value = .3; const wet = ctx.createGain(); wet.gain.value = .3;
+        leadBus.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(musicBus);
+        noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      } catch (e) { ctx = null; }
+    }
+    function osc(type, f, t, dur, vol, dest, o) {
+      o = o || {};
+      const os = ctx.createOscillator(), g = ctx.createGain();
+      os.type = type; os.frequency.setValueAtTime(f, t);
+      if (o.to) os.frequency.exponentialRampToValueAtTime(o.to, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + (o.attack || .008));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      if (o.lp) { const f2 = ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = o.lp; os.connect(f2); f2.connect(g); } else os.connect(g);
+      g.connect(dest); os.start(t); os.stop(t + dur + .05);
+      return os;
+    }
+    function noise(t, dur, vol, type, freq, dest, q) {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q || 1;
+      const g = ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * .4); s.stop(t + dur + .05);
+      return f;
+    }
+    function swell(t, dur, vol, freq) {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = .6;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol, t + dur * .3); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t); s.stop(t + dur + .05);
+    }
+    function brass(f, t, dur, vol, glide, vib) {
+      const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+      o.type = 'sawtooth'; o2.type = 'square'; o2.detune.value = 8;
+      [o, o2].forEach(x => { x.frequency.setValueAtTime(f, t); if (glide) x.frequency.exponentialRampToValueAtTime(glide, t + dur); });
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(380, t);
+      lp.frequency.linearRampToValueAtTime(1700, t + dur * .4); lp.frequency.linearRampToValueAtTime(500, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + .04);
+      g.gain.setValueAtTime(vol, t + dur * .75); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+      if (vib) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = 5.5; lg.gain.value = vib; l.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency); l.start(t); l.stop(t + dur + .05); }
+      o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(sfxBus);
+      o.start(t); o2.start(t); o.stop(t + dur + .05); o2.stop(t + dur + .05);
+    }
+    function duck(sec) {
+      if (!ctx || !musicOn) return;
+      const t = ctx.currentTime; musicBus.gain.cancelScheduledValues(t);
+      musicBus.gain.setTargetAtTime(.1, t, .05); musicBus.gain.setTargetAtTime(.5, t + sec, .5);
+    }
+    const ok = () => ctx && sfxOn && ctx.state !== 'closed';
+
+    function playStep(n, t) {
+      const bar = Math.floor(n / 16), s = n % 16, ci = bar % 4, ch = CH[ci];
+      if (s === 0 || s === 8 || (s === 10 && bar % 2)) osc('sine', 150, t, .2, .55, musicBus, { to: 42 });
+      if (s === 4 || s === 12) { noise(t, .12, .2, 'bandpass', 1900, musicBus, .8); osc('triangle', 200, t, .08, .1, musicBus); }
+      if (s % 2 === 0) noise(t, .04, s % 4 === 2 ? .08 : .045, 'highpass', 7500, musicBus);
+      if (s === 0 || s === 6 || s === 8 || s === 14) osc('triangle', mf(BASS[ci]) * (s === 6 || s === 14 ? 2 : 1), t, .24, .3, musicBus, { lp: 700 });
+      if (s % 2 === 0) {
+        const pat = bar < 4 ? A1 : A2;
+        osc('triangle', mf(ch[pat[s / 2]]), t, .22, .07, leadBus);
+        const m = MEL[bar][s / 2];
+        if (m) osc('square', mf(m), t, .2, .035, leadBus, { lp: 3200 });
+      }
+    }
+    function pump() { while (nextT < ctx.currentTime + .18) { playStep(step, nextT); nextT += SP; step = (step + 1) % 128; } }
+    function runMusic() { if (!ctx || timer) return; nextT = ctx.currentTime + .08; timer = setInterval(pump, 30); }
+    function haltMusic() { clearInterval(timer); timer = null; }
+
+    return {
+      init, get ready() { return !!ctx; },
+      start() { init(); if (!ctx) return; started = true; if (ctx.state === 'suspended') ctx.resume(); if (musicOn) { musicBus.gain.setTargetAtTime(.5, ctx.currentTime, .3); runMusic(); } },
+      setMusic(on) {
+        musicOn = on; if (!ctx || !started) return;
+        const t = ctx.currentTime; musicBus.gain.cancelScheduledValues(t);
+        if (on) { musicBus.gain.setTargetAtTime(.5, t, .2); runMusic(); }
+        else { musicBus.gain.setTargetAtTime(0, t, .1); setTimeout(() => { if (!musicOn) haltMusic(); }, 500); }
+      },
+      setSfx(on) { sfxOn = on; },
+      pause() { if (ctx && ctx.state === 'running') ctx.suspend(); },
+      resume() { if (ctx && started && ctx.state === 'suspended') ctx.resume(); },
+      click() { if (!ok()) return; const t = ctx.currentTime; osc('sine', 520, t, .09, .35, sfxBus, { to: 900 }); osc('triangle', 1040, t, .05, .1, sfxBus); },
+      tick() { if (!ok()) return; osc('sine', 1300, ctx.currentTime, .03, .05, sfxBus); },
+      nope() { if (!ok()) return; const t = ctx.currentTime; osc('square', 230, t, .12, .1, sfxBus, { lp: 900 }); osc('square', 170, t + .11, .16, .1, sfxBus, { lp: 900 }); },
+      whoosh() {
+        if (!ok()) return; const t = ctx.currentTime;
+        const f = noise(t, .4, .25, 'bandpass', 400, sfxBus, 1.2); f.frequency.exponentialRampToValueAtTime(3200, t + .35);
+        osc('triangle', 320, t, .3, .18, sfxBus, { to: 960 });
+      },
+      correct() {
+        if (!ok()) return; const t = ctx.currentTime + .02; duck(2);
+        ['C5', 'E5', 'G5', 'C6', 'E6'].forEach((n, i) => { osc('triangle', mf(n), t + i * .075, .38, .22, sfxBus); osc('sine', mf(n) * 2, t + i * .075, .26, .06, sfxBus); });
+        ['C5', 'E5', 'G5', 'C6'].forEach(n => osc('square', mf(n), t + .42, .75, .06, sfxBus, { lp: 3000, attack: .01 }));
+        for (let i = 0; i < 10; i++) osc('sine', 1800 + Math.random() * 2600, t + .2 + Math.random() * .9, .12, .05, sfxBus);
+        swell(t + .25, 1.5, .16, 1500);
+        for (let i = 0; i < 18; i++) noise(t + .4 + i * .055 + Math.random() * .03, .05, .12, 'highpass', 1500, sfxBus);
+      },
+      wrong() {
+        if (!ok()) return; const t = ctx.currentTime + .02; duck(2.8);
+        brass(311.1, t, .38, .2); brass(293.7, t + .42, .38, .2); brass(277.2, t + .84, .38, .2);
+        brass(261.6, t + 1.26, 1.2, .22, 196, 6);
+        osc('sine', 90, t + 1.26, .5, .3, sfxBus, { to: 50 });
+      },
+      fanfare(big) {
+        if (!ok()) return; const t = ctx.currentTime + .02; duck(3.4);
+        ['C5', 'E5', 'G5'].forEach((n, i) => brass(mf(n), t + i * .15, .2, .16));
+        ['C5', 'E5', 'G5', 'C6'].forEach(n => brass(mf(n), t + .5, big ? 1.6 : 1, .13, 0, 4));
+        for (let i = 0; i < 14; i++) osc('sine', 1800 + Math.random() * 2800, t + .4 + Math.random() * 1.4, .14, .05, sfxBus);
+        if (big) { swell(t + .4, 2.4, .2, 1400); for (let i = 0; i < 34; i++) noise(t + .6 + i * .06 + Math.random() * .04, .05, .12, 'highpass', 1500, sfxBus); }
+      }
+    };
+  })();
+
+  /* ---------- confetti, fireworks (canvas) ---------- */
+  const FX = (function () {
+    const cv = $('#fx'), g = cv.getContext('2d');
+    const COLORS = ['#ffc72c', '#ff5d8f', '#22c1f1', '#2fd27a', '#9a6cff', '#ff9a1f', '#ffffff'];
+    let W = 0, H = 0, P = [], raf = 0;
+    function size() { const d = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0); }
+    addEventListener('resize', size); size();
+    function confetti(x, y, ang, spread, vmin, vmax, n) {
+      for (let i = 0; i < n; i++) {
+        const a = ang + rnd(-spread, spread), s = rnd(vmin, vmax);
+        P.push({ k: Math.random() < .2 ? 'st' : 'r', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, w: rnd(7, 12), h: rnd(4, 7), r: rnd(0, 6.28), vr: rnd(-.3, .3), c: pick(COLORS), life: 0, max: rnd(120, 200), g: .24, d: .985, fl: rnd(0, 6) });
+      }
+    }
+    function firework(x, y, n) {
+      const c1 = pick(COLORS), c2 = pick(COLORS);
+      for (let i = 0; i < n; i++) {
+        const a = i / n * 6.283 + rnd(-.06, .06), s = rnd(2.5, 7);
+        P.push({ k: 's', x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, c: i % 3 ? c1 : c2, life: 0, max: rnd(50, 85), g: .06, d: .965, sz: rnd(2, 3.6) });
+      }
+    }
+    function rainFromTop(n) {
+      for (let i = 0; i < n; i++) P.push({ k: Math.random() < .25 ? 'st' : 'r', x: rnd(0, W), y: rnd(-H * .5, -10), vx: rnd(-1, 1), vy: rnd(1.5, 4), w: rnd(7, 12), h: rnd(4, 7), r: rnd(0, 6.28), vr: rnd(-.2, .2), c: pick(COLORS), life: 0, max: rnd(160, 260), g: .03, d: .995, fl: rnd(0, 6) });
+    }
+    function star(x, y, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? r * .45 : r, a = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); }
+    function frame() {
+      g.clearRect(0, 0, W, H);
+      for (let i = P.length - 1; i >= 0; i--) {
+        const p = P[i]; p.life++; p.vx *= p.d; p.vy = p.vy * p.d + p.g; p.x += p.vx; p.y += p.vy;
+        if (p.life > p.max || p.y > H + 40) { P.splice(i, 1); continue; }
+        const fade = Math.min(1, (p.max - p.life) / 30);
+        g.globalAlpha = fade; g.fillStyle = p.c; g.strokeStyle = p.c;
+        if (p.k === 's') {
+          g.globalCompositeOperation = 'lighter'; g.lineWidth = p.sz; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(p.x - p.vx * 2, p.y - p.vy * 2); g.lineTo(p.x, p.y); g.stroke(); g.globalCompositeOperation = 'source-over';
+        } else {
+          p.r += p.vr; g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.scale(1, Math.cos(p.fl + p.life * .2));
+          if (p.k === 'st') star(0, 0, p.w * .8); else g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          g.restore();
+        }
+      }
+      g.globalAlpha = 1;
+      raf = P.length ? requestAnimationFrame(frame) : 0;
+      if (!P.length) g.clearRect(0, 0, W, H);
+    }
+    function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+    return {
+      celebrate(big) {
+        if (reduced) { confetti(W / 2, H * .35, -Math.PI / 2, 1.2, 3, 6, 36); kick(); return; }
+        confetti(0, H * .92, -1.05, .45, 13, 21, big ? 110 : 80);
+        confetti(W, H * .92, -Math.PI + 1.05, .45, 13, 21, big ? 110 : 80);
+        rainFromTop(big ? 150 : 90);
+        [[.25, .3, 0], [.75, .27, 220], [.5, .2, 440]].forEach(f => setTimeout(() => { firework(W * f[0], H * f[1], 50); kick(); }, f[2]));
+        if (big) [[.15, .45, 900], [.85, .4, 1100], [.5, .32, 1400]].forEach(f => setTimeout(() => { firework(W * f[0], H * f[1], 56); confetti(W * f[0], H * f[1], -Math.PI / 2, 1.6, 3, 8, 30); kick(); }, f[2]));
+        kick();
+      }
+    };
+  })();
+
+  /* ---------- state (saved in the browser when it allows) ---------- */
+  const KEY = 'boc-flex-quiz-v1';
+  let memState = null;
+  function fresh(prefs) {
+    return { v: 1, map: [-1].concat(shuffle(QUESTIONS.map((_, i) => i))), opened: {}, music: prefs ? prefs.music : true, sfx: prefs ? prefs.sfx : true };
+  }
+  function load() {
+    let s = null;
+    try { const raw = localStorage.getItem(KEY); if (raw) s = JSON.parse(raw); } catch (e) {}
+    if (!s) s = memState;
+    if (s && s.v === 1 && Array.isArray(s.map) && s.map.length === TOTAL && s.opened && typeof s.opened === 'object') return s;
+    return null;
+  }
+  let state = load() || fresh();
+  function save() { memState = state; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  const score = () => { let c = 0; for (let n = 1; n < TOTAL; n++) if (state.opened[n] === 'correct') c++; return c * POINTS; };
+  const correctCount = () => score() / POINTS;
+  const openedCount = () => Object.keys(state.opened).length;
+  const complete = () => { for (let n = 0; n < TOTAL; n++) { const s = state.opened[n]; if (s !== 'correct' && s !== 'wrong') return false; } return true; };
+
+  /* ---------- elements ---------- */
+  const home = $('#home'), quiz = $('#quiz'), board = $('#board');
+  const resultEl = $('#result'), finaleEl = $('#finale'), confirmEl = $('#confirm'), welcomeEl = $('#welcome');
+  let cur = null, busy = false, toastT = 0, lastTick = 0;
+
+  /* ---------- board ---------- */
+  function renderBoard(stampN) {
+    board.innerHTML = '';
+    for (let n = 0; n < TOTAL; n++) {
+      const st = state.opened[n];
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.n = n; b.style.setProperty('--i', n);
+      b.className = 'card ' + (n === 0 ? 'kg' : 'k' + (n % 5)) + (st ? ' done ' + (st === 'correct' ? 'ok' : st === 'wrong' ? 'bad' : 'seen') : '') + (n === stampN ? ' stamp' : '');
+      b.setAttribute('aria-label', 'අංක ' + n + (st ? ' - විවෘත කර ඇත' : n === 0 ? ' - පුහුණු ප්‍රශ්නය' : ''));
+      b.innerHTML = '<span class="num">' + n + '</span><span class="tag">' + (st ? 'විවෘතයි' : n === 0 ? 'පුහුණුව' : 'ප්‍රශ්නය') + '</span>' +
+        '<span class="badge">' + (st === 'correct' ? ICON.check : st === 'wrong' ? ICON.cross : ICON.dots) + '</span>';
+      board.appendChild(b);
+    }
+  }
+  function updateStats(bump) {
+    $('#score').textContent = score();
+    $('#openedTxt').textContent = openedCount() + ' / ' + TOTAL;
+    $('#fill').style.width = (openedCount() / TOTAL * 100) + '%';
+    $('#seeResult').hidden = !complete();
+    if (bump) { const c = $('#scoreChip'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+  }
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200);
+  }
+
+  board.addEventListener('pointerover', e => {
+    const c = e.target.closest('.card'); if (!c || c.classList.contains('done')) return;
+    const now = performance.now(); if (now - lastTick > 90) { lastTick = now; Snd.tick(); }
+  });
+  board.addEventListener('click', e => {
+    const c = e.target.closest('.card'); if (!c || busy) return;
+    const n = +c.dataset.n;
+    if (state.opened[n]) {
+      Snd.nope(); toast('මෙම අංකය දැනටමත් විවෘත කර ඇත.');
+      c.classList.remove('nope'); void c.offsetWidth; c.classList.add('nope'); return;
+    }
+    busy = true; Snd.click(); Snd.whoosh();
+    c.classList.add('launch');
+    setTimeout(() => { showQuestion(n); busy = false; }, 340);
+  });
+
+  /* ---------- question ---------- */
+  const LETTER_COLORS = ['#22c1f1', '#ff9a1f', '#9a6cff', '#ff5d8f'];
+  function showQuestion(n) {
+    const q = n === 0 ? WARMUP : QUESTIONS[state.map[n]];
+    state.opened[n] = 'seen'; save(); updateStats();
+    cur = { n, q, order: shuffle([0, 1, 2, 3]), answered: false };
+    const qn = $('#qnum'); qn.textContent = n; qn.className = 'qnum ' + (n === 0 ? 'kg' : 'k' + (n % 5));
+    $('#qlabel').textContent = n === 0 ? 'පුහුණු ප්‍රශ්නය' : 'ප්‍රශ්නය ' + n;
+    $('#qpts').textContent = n === 0 ? 'ලකුණු නැත' : 'ලකුණු ' + POINTS;
+    $('#qtext').textContent = q.q;
+    const opts = $('#opts'); opts.innerHTML = '';
+    cur.order.forEach((oi, k) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'opt'; b.dataset.k = k; b.style.setProperty('--k', k); b.style.setProperty('--lc', LETTER_COLORS[k]);
+      b.innerHTML = '<span class="let">' + 'ABCD'[k] + '</span><span class="txt"></span><span class="mark"></span>';
+      b.querySelector('.txt').textContent = q.o[oi];
+      opts.appendChild(b);
+    });
+    home.hidden = true; quiz.hidden = false;
+    quiz.style.animation = 'none'; void quiz.offsetWidth; quiz.style.animation = '';
+    scrollTo(0, 0);
+    $('#qtext').focus({ preventScroll: true });
+  }
+  $('#opts').addEventListener('click', e => { const b = e.target.closest('.opt'); if (b) answer(+b.dataset.k); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !confirmEl.hidden) { confirmEl.hidden = true; return; }
+    if (quiz.hidden || !cur || cur.answered || e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = '1234'.indexOf(e.key); const l = 'abcd'.indexOf(e.key.toLowerCase());
+    const i = k >= 0 ? k : l; if (i >= 0 && e.key.length === 1) answer(i);
+  });
+
+  function answer(k) {
+    if (!cur || cur.answered) return;
+    cur.answered = true;
+    const ok = cur.order[k] === cur.q.a;
+    const btns = [].slice.call(document.querySelectorAll('#opts .opt'));
+    btns.forEach((b, i) => {
+      b.classList.add('locked');
+      const mark = b.querySelector('.mark');
+      if (cur.order[i] === cur.q.a) { b.classList.add('right'); mark.innerHTML = ICON.check; }
+      else if (i === k) { b.classList.add('wrong'); mark.innerHTML = ICON.cross; }
+      else b.classList.add('dim');
+    });
+    state.opened[cur.n] = ok ? 'correct' : 'wrong'; save(); updateStats(ok && cur.n > 0);
+    Snd.click();
+    if (ok) {
+      setTimeout(() => { Snd.correct(); FX.celebrate(false); }, 150);
+      setTimeout(() => showResult(true), 1050);
+    } else {
+      setTimeout(() => { Snd.wrong(); $('#rain').classList.add('on'); }, 150);
+      setTimeout(() => showResult(false), 1100);
+    }
+  }
+
+  function showResult(ok) {
+    const n = cur.n;
+    $('#rcard').className = 'rcard ' + (ok ? 'ok' : 'bad');
+    $('#rays').hidden = !ok;
+    $('#rMascot').innerHTML = mascot(ok ? 'happy' : 'sad');
+    $('#rTitle').textContent = ok ? 'නිවැරදියි!' : 'වැරදියි!';
+    $('#rSub').textContent = ok
+      ? (n === 0 ? 'පුහුණු ප්‍රශ්නය නිවැරදියි! දැන් සැබෑ ප්‍රශ්නවලට සූදානම්.' : 'ඉතා හොඳයි! ලකුණු ' + POINTS + 'ක් ලැබුණා.')
+      : 'කමක් නැහැ, ඊළඟ වතාවේ උත්සාහ කරමු.';
+    $('#rAnswer').hidden = ok;
+    if (!ok) $('#rAnswerTxt').textContent = cur.q.o[cur.q.a];
+    $('#rNext').textContent = complete() ? 'ප්‍රතිඵලය බලන්න' : 'ඊළඟ අංකය තෝරන්න';
+    resultEl.hidden = false;
+    $('#rNext').focus({ preventScroll: true });
+  }
+  $('#rNext').addEventListener('click', () => {
+    Snd.click(); resultEl.hidden = true; $('#rain').classList.remove('on');
+    const n = cur.n; cur = null;
+    goHome(n);
+    if (complete()) setTimeout(showFinale, 500);
+  });
+  function goHome(stampN) {
+    quiz.hidden = true; home.hidden = false;
+    board.classList.remove('intro'); renderBoard(stampN); updateStats();
+    scrollTo(0, 0);
+  }
+
+  /* ---------- finale ---------- */
+  function showFinale() {
+    const sc = score(), cc = correctCount();
+    const stars = sc >= 80 ? 3 : sc >= 50 ? 2 : sc > 0 ? 1 : 0;
+    $('#fMascot').innerHTML = mascot(sc >= 30 ? 'happy' : 'sad');
+    $('#fStars').innerHTML = [0, 1, 2].map(i => '<span class="' + (i < stars ? 'on' : '') + '" style="--s:' + i + '">' +
+      ICON.star.replace('CLR', i < stars ? '#ffc72c' : '#cfd6f5').replace('STR', i < stars ? '#d99100' : '#aab4e6') + '</span>').join('');
+    $('#fCorrect').textContent = 'නිවැරදි පිළිතුරු ' + cc + ' / 20';
+    $('#fMsg').textContent = sc >= 80 ? 'විශිෂ්ටයි! ඔබ සැබෑ ඩිජිටල් බැංකු විශේෂඥයෙක්!' : sc >= 50 ? 'ඉතා හොඳයි! තව ටිකක් උත්සාහ කළොත් සම්පූර්ණ ලකුණු ලබාගත හැක.' : 'හොඳ උත්සාහයක්! නැවත සෙල්ලම් කර තවත් ලකුණු ලබාගන්න.';
+    // count up
+    const out = $('#fScore'); let v = 0; const end = sc;
+    out.textContent = '0'; finaleEl.hidden = false;
+    const iv = setInterval(() => { v = Math.min(end, v + 5); out.textContent = v; if (v >= end) clearInterval(iv); }, 70);
+    if (sc >= 30) { Snd.fanfare(true); FX.celebrate(true); } else { Snd.wrong(); }
+    $('#fAgain').focus({ preventScroll: true });
+  }
+  $('#fClose').addEventListener('click', () => { Snd.click(); finaleEl.hidden = true; });
+  $('#fAgain').addEventListener('click', () => { Snd.click(); finaleEl.hidden = true; resetGame(); });
+  $('#seeResult').addEventListener('click', () => { Snd.click(); showFinale(); });
+
+  /* ---------- reset ---------- */
+  function resetGame() {
+    state = fresh({ music: state.music, sfx: state.sfx }); save();
+    quiz.hidden = true; home.hidden = false; cur = null;
+    board.classList.add('intro'); renderBoard(); updateStats(); scrollTo(0, 0);
+  }
+  $('#resetBtn').addEventListener('click', () => { Snd.click(); confirmEl.hidden = false; $('#cNo').focus({ preventScroll: true }); });
+  $('#cNo').addEventListener('click', () => { Snd.click(); confirmEl.hidden = true; });
+  $('#cYes').addEventListener('click', () => { Snd.click(); confirmEl.hidden = true; resetGame(); });
+
+  /* ---------- sound toggles ---------- */
+  function syncToggles() {
+    $('#musicBtn').setAttribute('aria-pressed', String(state.music));
+    $('#sfxBtn').setAttribute('aria-pressed', String(state.sfx));
+  }
+  $('#musicBtn').addEventListener('click', () => { state.music = !state.music; save(); syncToggles(); Snd.setMusic(state.music); Snd.click(); });
+  $('#sfxBtn').addEventListener('click', () => { Snd.click(); state.sfx = !state.sfx; save(); syncToggles(); Snd.setSfx(state.sfx); if (state.sfx) Snd.click(); });
+  document.addEventListener('visibilitychange', () => { document.hidden ? Snd.pause() : Snd.resume(); });
+
+  /* ---------- welcome (needed so the browser lets audio start) ---------- */
+  $('#wStart').addEventListener('click', () => {
+    Snd.setMusic(state.music); Snd.setSfx(state.sfx);
+    Snd.start(); Snd.click();
+    welcomeEl.classList.add('out'); setTimeout(() => { welcomeEl.hidden = true; }, 480);
+    if (!reduced) FX.celebrate(false);
+  });
+
+  /* ---------- background decoration ---------- */
+  (function () {
+    const coins = $('#coins'); let h = '';
+    for (let i = 0; i < 12; i++) h += '<span class="coin" style="--x:' + rnd(2, 96).toFixed(1) + '%;--s:' + Math.round(rnd(26, 62)) + 'px;--d:' + rnd(16, 30).toFixed(1) + 's;--dl:-' + rnd(0, 28).toFixed(1) + 's"><i>Rs</i></span>';
+    coins.innerHTML = h;
+    let r = ''; for (let i = 0; i < 46; i++) r += '<i style="--x:' + rnd(0, 100).toFixed(1) + '%;--d:' + rnd(.7, 1.3).toFixed(2) + 's;--dl:-' + rnd(0, 1.3).toFixed(2) + 's"></i>';
+    $('#rain').innerHTML = r;
+  })();
+
+  /* ---------- boot ---------- */
+  $('#brandMark').innerHTML = mascot('happy');
+  $('#heroMascot').innerHTML = mascot('happy');
+  $('#wMascot').innerHTML = mascot('happy');
+  Snd.setMusic(state.music); Snd.setSfx(state.sfx);
+  syncToggles(); renderBoard(); updateStats();
+  $('#wStart').focus({ preventScroll: true });
+})();
+</script>
