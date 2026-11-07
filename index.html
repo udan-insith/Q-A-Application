@@ -73,7 +73,7 @@
   .wrap {
     position: relative;
     z-index: 1;
-    max-width: 1080px;
+    max-width: 1240px;
     margin: 0 auto;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -294,15 +294,31 @@
   }
 
   /* number board */
+  /* 30 cards: 5x6 on phones, 6x5 on tablets, 10x3 on wide screens. Rows stretch so the board fills the height left under the header. */
   .board {
+    --cols: 5;
+    --minh: 66px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px 12px;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    grid-auto-rows: minmax(var(--minh), 1fr);
+    gap: 10px;
+    min-height: 440px;
+    min-height: clamp(440px, calc(100dvh - 270px), 920px);
   }
-  @media (min-width: 640px) {
+  @media (min-width: 480px) {
     .board {
-      grid-template-columns: repeat(7, 1fr);
-      gap: 16px 14px;
+      --cols: 6;
+      --minh: 78px;
+      gap: 12px;
+    }
+  }
+  @media (min-width: 800px) {
+    .board {
+      --cols: 10;
+      --minh: 100px;
+      gap: 14px;
+      min-height: 380px;
+      min-height: clamp(380px, calc(100dvh - 300px), 600px);
     }
   }
 
@@ -316,7 +332,6 @@
     border-radius: 22px;
     cursor: pointer;
     color: #fff;
-    aspect-ratio: 1 / 1.1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -352,15 +367,9 @@
     --cl: #c3a8ff;
     --cd: #5a31b8;
   }
-  .kg {
-    --c: var(--gold);
-    --cl: #ffeb9c;
-    --cd: var(--gold-deep);
-    color: #5a3600;
-  }
   .intro .card {
     animation: pop 0.6s backwards cubic-bezier(0.2, 1.5, 0.4, 1);
-    animation-delay: calc(var(--i) * 36ms);
+    animation-delay: calc(var(--i) * 24ms);
   }
   .card::after {
     content: "";
@@ -395,7 +404,7 @@
       inset 0 2px 0 rgba(255, 255, 255, 0.55);
   }
   .card .num {
-    font-size: clamp(2.3rem, 6.5vw, 3.3rem);
+    font-size: clamp(1.7rem, 1rem + 2.4vw, 3.2rem);
     font-weight: 700;
     line-height: 1;
     text-shadow: 0 3px 0 rgba(0, 0, 0, 0.2);
@@ -405,9 +414,6 @@
     padding: 1px 10px;
     border-radius: 999px;
     background: rgba(0, 0, 0, 0.2);
-  }
-  .kg .tag {
-    background: rgba(90, 54, 0, 0.18);
   }
   .card .badge {
     display: none;
@@ -490,10 +496,6 @@
     box-shadow:
       0 6px 0 var(--cd),
       0 14px 24px rgba(0, 0, 0, 0.3);
-  }
-  .qnum.kg {
-    color: #5a3600;
-    text-shadow: none;
   }
   .qmeta b {
     display: block;
@@ -968,17 +970,36 @@
       height: 72px;
     }
     .hero p {
-      font-size: 0.88rem;
-      line-height: 1.55;
+      display: none;
     }
     .progress {
       margin-bottom: 14px;
     }
-    .board {
-      gap: 12px 10px;
-    }
     .qpanel {
       border-radius: 22px;
+    }
+  }
+  @media (max-width: 479px) {
+    .card {
+      border-radius: 16px;
+      gap: 0;
+      box-shadow:
+        0 4px 0 var(--cd),
+        0 8px 12px rgba(0, 0, 0, 0.28),
+        inset 0 2px 0 rgba(255, 255, 255, 0.5);
+    }
+    .card .tag {
+      display: none;
+    }
+    .card .badge {
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+    }
+    .card .badge svg {
+      width: 12px;
+      height: 12px;
     }
   }
   @media (max-width: 380px) {
@@ -1275,8 +1296,8 @@
     <div class="brand">
       <span id="brandMark" aria-hidden="true"></span>
       <div>
-        <b>Flex Banking Quiz</b>
-        <small>ඩිජිටල් බැංකු ප්‍රශ්නාවලිය</small>
+        <b>BOC Flex Quiz</b>
+        <small>බැංකු සහ සාමාන්‍ය දැනුම ප්‍රශ්නාවලිය</small>
       </div>
     </div>
     <div class="tools">
@@ -1354,7 +1375,7 @@
         <div>
           <h1><em>අංකයක්</em> තෝරන්න</h1>
           <p>
-            0 සිට 20 දක්වා කාඩ්පතක් ඔබා ප්‍රශ්නයක් ලබාගන්න. එක් අංකයක් විවෘත කළ
+            0 සිට 29 දක්වා කාඩ්පතක් ඔබා ප්‍රශ්නයක් ලබාගන්න. එක් අංකයක් විවෘත කළ
             හැක්කේ එක් වරක් පමණි.
           </p>
         </div>
@@ -1429,7 +1450,9 @@
     </div>
     <h2 id="fTitle">සුභ පැතුම්!</h2>
     <div class="stars" id="fStars"></div>
-    <p class="finale-score"><span id="fScore">0</span> <small>/ 100</small></p>
+    <p class="finale-score">
+      <span id="fScore">0</span> <small>/ <span id="fMax">150</span></small>
+    </p>
     <p id="fCorrect"></p>
     <p id="fMsg"></p>
     <div class="actions">
@@ -1469,7 +1492,10 @@
   <div class="inner">
     <span id="wMascot" aria-hidden="true"></span>
     <h2 id="wTitle">BOC <em>Flex</em> Quiz</h2>
-    <p>ඩිජිටල් බැංකු ප්‍රශ්නාවලිය. හොඳම අත්දැකීම සඳහා ශබ්දය සක්‍රීය කරන්න.</p>
+    <p>
+      බැංකු සහ සාමාන්‍ය දැනුම ප්‍රශ්නාවලිය. හොඳම අත්දැකීම සඳහා ශබ්දය සක්‍රීය
+      කරන්න.
+    </p>
     <button class="btn" id="wStart" type="button">සෙල්ලම ආරම්භ කරන්න</button>
   </div>
 </div>
@@ -1479,43 +1505,159 @@
     "use strict";
     document.documentElement.lang = "si";
 
-    /* ---------- questions (from the supplied BOC question set) ---------- */
+    /* ---------- questions (supplied by the user) ---------- */
+    // 20 questions supplied for this quiz, followed by 10 harder digital banking questions from the BOC Flex set
     // o = options in original order (A-D); a = index of the correct option.
-    const WARMUP = {
-      q: "ලංකා බැංකුවේ ප්‍රධාන කාර්යාලය පිහිටා ඇත්තේ කොහේද?",
-      o: ["මහනුවර", "ගාල්ල", "කොළඹ", "අනුරාධපුරය"],
-      a: 2,
-    };
     const QUESTIONS = [
       {
-        q: "ශිෂ්‍යයෙකුට මුදල් ඉතිරි කිරීමේ ප්‍රධාන වාසිය කුමක්ද?",
+        q: "බැංකුවකින් ලබාදෙන Debit Card එකකින් ගෙවීමක් සිදු කරන විට සාමාන්‍යයෙන් මුදල් අඩු වන්නේ කොහෙන්ද?",
         o: [
-          "අනවශ්‍ය වියදම් වැඩි කරගැනීම.",
-          "අනාගත අවශ්‍යතා සඳහා මුදල් සූදානම් කරගැනීම.",
-          "මුදල් සියල්ල එකවර වියදම් කිරීම.",
-          "ණය මත යැපීම.",
+          "බැංකුවේ ලාභයෙන්",
+          "ගිණුම් හිමියාගේ බැංකු ගිණුමෙන්",
+          "මහ බැංකුවෙන්",
+          "ක්‍රෙඩිට් සීමාවෙන්",
         ],
         a: 1,
       },
       {
-        q: "මාසිකව ලැබෙන මුදලක් හොඳින් කළමනාකරණය කිරීමට සුදුසුම ක්‍රමය කුමක්ද?",
+        q: "QR Code යන්නෙහි සම්පූර්ණ ඉංග්‍රීසි නාමය කුමක්ද?",
         o: [
-          "සියලු මුදල් වහාම වියදම් කිරීම.",
-          "වියදම් සැලසුම් කර කොටසක් ඉතිරි කිරීම.",
-          "මිතුරන්ට සියල්ල ලබාදීම.",
-          "කිසිදු සැලැස්මක් නොමැතිව වියදම් කිරීම.",
-        ],
-        a: 1,
-      },
-      {
-        q: "ඉතුරුම් ගිණුමක ප්‍රධාන අරමුණ කුමක්ද?",
-        o: [
-          "මුදල් ආරක්ෂිතව තැන්පත් කර අවශ්‍ය විට භාවිතයට ගැනීම.",
-          "මුදල් නාස්ති කිරීම.",
-          "ණය ලබාගැනීම පමණක්.",
-          "බිල්පත් මුද්‍රණය කිරීම.",
+          "Quick Response Code",
+          "Quality Reading Code",
+          "Quick Register Code",
+          "Question Response Code",
         ],
         a: 0,
+      },
+      {
+        q: "ශ්‍රී ලංකාවේ LankaPay ආයතනයේ ප්‍රධාන කාර්යභාරය කුමක්ද?",
+        o: [
+          "විදේශ ගමන් බලපත්‍ර නිකුත් කිරීම",
+          "ජාතික ගෙවීම් යටිතල පහසුකම් සහ ගෙවීම් පද්ධති සැපයීම",
+          "මුදල් නෝට්ටු මුද්‍රණය කිරීම",
+          "රජයේ බදු අයකිරීම",
+        ],
+        a: 1,
+      },
+      {
+        q: "ලෝකයේ වැඩිම භාෂා සංඛ්‍යාවක් භාවිත වන රට ලෙස ප්‍රසිද්ධ රට කුමක්ද?",
+        o: ["ඉන්දියාව", "චීනය", "පැපුවා නිව්ගිනියාව", "ඉන්දුනීසියාව"],
+        a: 2,
+      },
+      {
+        q: "DNA යන්නෙහි සම්පූර්ණ නාමය කුමක්ද?",
+        o: [
+          "Deoxyribonucleic Acid",
+          "Dinucleic Acid",
+          "Double Nitrogen Acid",
+          "Deoxyribose Natural Acid",
+        ],
+        a: 0,
+      },
+      {
+        q: "ජපානයේ පාර්ලිමේන්තුව හඳුන්වන නම කුමක්ද?",
+        o: ["සෙනෙට් සභාව", "ඩයට් (Diet)", "කොංග්‍රසය", "ඩූමා"],
+        a: 1,
+      },
+      {
+        q: "ආර්ථික විද්‍යාවේ උද්ධමනය (Inflation) යන්නෙන් අදහස් කරන්නේ කුමක්ද?",
+        o: [
+          "භාණ්ඩ මිල අඛණ්ඩව ඉහළ යාම",
+          "විරැකියාව අඩු වීම",
+          "අපනයන වැඩි වීම",
+          "පොලී අනුපාත අඩු වීම",
+        ],
+        a: 0,
+      },
+      {
+        q: "පෘථිවියේ භූගර්භයේ වැඩිම ප්‍රමාණයක් අඩංගු මූලද්‍රව්‍යය කුමක්ද?",
+        o: ["යකඩ", "ඔක්සිජන්", "සිලිකන්", "ඇලුමිනියම්"],
+        a: 1,
+      },
+      {
+        q: "ලෝකයේ විශාලතම අභ්‍යන්තර මුහුද ලෙස සැලකෙන්නේ කුමක්ද?",
+        o: ["මධ්‍යධරණී මුහුද", "කැස්පියන් මුහුද", "රතු මුහුද", "කළු මුහුද"],
+        a: 1,
+      },
+      {
+        q: "ආලෝකයේ වේගය ආසන්න වශයෙන් තත්පරයට කිලෝමීටර් කීයද?",
+        o: ["150,000 km", "200,000 km", "300,000 km", "450,000 km"],
+        a: 2,
+      },
+      {
+        q: "ශ්‍රී ලංකාවේ පළමු විශ්වවිද්‍යාලය ලෙස ආරම්භ වූ ආයතනය කුමක්ද?",
+        o: [
+          "පේරාදෙණිය විශ්වවිද්‍යාලය",
+          "ලංකා විශ්වවිද්‍යාලය",
+          "කොළඹ විශ්වවිද්‍යාලය",
+          "කැලණිය විශ්වවිද්‍යාලය",
+        ],
+        a: 1,
+      },
+      {
+        q: "ලෝකයේ පළමු කාන්තා අගමැතිනිය කවුද?",
+        o: [
+          "ඉන්දිරා ගාන්ධි",
+          "මාග්‍රට් තැචර්",
+          "සිරිමාවෝ බණ්ඩාරනායක",
+          "බෙනසීර් භූතෝ",
+        ],
+        a: 2,
+      },
+      {
+        q: "විදුලි ධාරාවේ ඒකකය කුමක්ද?",
+        o: ["වෝල්ට්", "ඇම්පියර්", "ඕම්", "වොට්"],
+        a: 1,
+      },
+      {
+        q: "ජාත්‍යන්තර මූල්‍ය අරමුදල (IMF) හි මූලස්ථානය පිහිටා ඇත්තේ කොහේද?",
+        o: ["නිව්යෝර්ක්", "ලන්ඩන්", "වොෂින්ටන් ඩී.සී.", "පැරිස්"],
+        a: 2,
+      },
+      {
+        q: "පෘථිවියේ වායුගෝලයේ වැඩිම ප්‍රතිශතයක් අඩංගු වායුව කුමක්ද?",
+        o: ["ඔක්සිජන්", "නයිට්‍රජන්", "කාබන් ඩයොක්සයිඩ්", "හයිඩ්‍රජන්"],
+        a: 1,
+      },
+      {
+        q: "පැනමා ඇළ සම්බන්ධ කරන්නේ කුමන සාගර දෙකද?",
+        o: [
+          "ඉන්දියානු සහ පැසිෆික්",
+          "අත්ලාන්තික් සහ පැසිෆික්",
+          "ආක්ටික් සහ අත්ලාන්තික්",
+          "ඉන්දියානු සහ අත්ලාන්තික්",
+        ],
+        a: 1,
+      },
+      {
+        q: "ආර්ථික විද්‍යාවේ GDP යන්නෙහි සිංහල අර්ථය කුමක්ද?",
+        o: [
+          "දළ ජාතික ආදායම",
+          "දළ දේශීය නිෂ්පාදිතය",
+          "ශුද්ධ ජාතික ආදායම",
+          "සමස්ත විදේශ ආදායම",
+        ],
+        a: 1,
+      },
+      {
+        q: "පරමාණුවක න්‍යෂ්ටිය තුළ අඩංගු මූලික අංශු දෙක කුමක්ද?",
+        o: [
+          "ඉලෙක්ට්‍රෝන සහ ප්‍රෝටෝන",
+          "ප්‍රෝටෝන සහ නියුට්‍රෝන",
+          "ඉලෙක්ට්‍රෝන සහ නියුට්‍රෝන",
+          "ෆෝටෝන සහ ඉලෙක්ට්‍රෝන",
+        ],
+        a: 1,
+      },
+      {
+        q: "ඔලිම්පික් ක්‍රීඩා උළෙලේ සංකේතයේ වළලු සංඛ්‍යාව කීයද?",
+        o: ["4", "5", "6", "7"],
+        a: 1,
+      },
+      {
+        q: "ලෝකයේ පළමු කෘත්‍රිම චන්ද්‍රිකාව කුමක්ද?",
+        o: ["ඇපලෝ 11", "වොයේජර් 1", "ස්පුට්නික් 1", "හබල්"],
+        a: 2,
       },
       {
         q: "ස්ථාවර තැන්පතුවක් (Fixed Deposit) යනු කුමක්ද?",
@@ -1531,56 +1673,6 @@
         q: "BOC හි නව පරම්පරාවේ ජංගම බැංකුකරණ යෙදුම හඳුන්වන්නේ කුමන නමින්ද?",
         o: ["BOC Smart Passbook", "BOC Flex", "BOC Connect", "BOC Travel"],
         a: 1,
-      },
-      {
-        q: "BOC Flex යෙදුම ප්‍රධාන වශයෙන් භාවිත කරන්නේ කුමක් සඳහාද?",
-        o: [
-          "ජංගම දුරකථනය හරහා බැංකු සේවා ලබාගැනීමට.",
-          "පාසල් විභාග සඳහා ලියාපදිංචි වීමට.",
-          "රූපවාහිනී වැඩසටහන් නැරඹීමට.",
-          "ගමන් බලපත්‍ර නිකුත් කිරීමට.",
-        ],
-        a: 0,
-      },
-      {
-        q: "BOC Flex යෙදුමට පිවිසීමේදී සහාය වන ජෛවමිතික ආරක්ෂණ ක්‍රමයක් කුමක්ද?",
-        o: [
-          "ඇඟිලි සලකුණ හෝ මුහුණු හඳුනාගැනීම.",
-          "වාහන අංකය.",
-          "පාසල් හැඳුනුම්පත් අංකය.",
-          "තැපැල් කේතය.",
-        ],
-        a: 0,
-      },
-      {
-        q: "BOC Flex මඟින් පාරිභෝගිකයෙකුට කළ හැකි කාර්යයක් කුමක්ද?",
-        o: [
-          "ගිණුම් ශේෂය පරීක්ෂා කිරීම.",
-          "විභාග ප්‍රතිඵල වෙනස් කිරීම.",
-          "රියදුරු බලපත්‍ර නිකුත් කිරීම.",
-          "ජාතික හැඳුනුම්පත් මුද්‍රණය කිරීම.",
-        ],
-        a: 0,
-      },
-      {
-        q: "BOC Flex මඟින් සිදුකළ හැකි ගෙවීමක් කුමක්ද?",
-        o: [
-          "බිල්පත් ගෙවීම.",
-          "පාසල් පැමිණීම සටහන් කිරීම.",
-          "විභාග පත්‍රිකා පරීක්ෂා කිරීම.",
-          "වාහන ලියාපදිංචි කිරීම.",
-        ],
-        a: 0,
-      },
-      {
-        q: "BOC Flex යෙදුමෙන් ජංගම දුරකථන සම්බන්ධයෙන් කළ හැකි සේවාව කුමක්ද?",
-        o: [
-          "ජංගම දුරකථන රීලෝඩ් කිරීම.",
-          "දුරකථන අලුත්වැඩියා කිරීම.",
-          "නව SIM කාඩ්පත් නිෂ්පාදනය කිරීම.",
-          "දුරකථන අංක නිකුත් කිරීම.",
-        ],
-        a: 0,
       },
       {
         q: "BOC Flex යෙදුමෙන් QR ගෙවීමක් සිදුකිරීමේදී භාවිත කළ හැකි ක්‍රමය කුමක්ද?",
@@ -1599,16 +1691,6 @@
           "විභාග ලකුණු ගණනය කිරීමට.",
           "මිතුරන්ගේ දුරකථන අංක සොයාගැනීමට.",
           "ATM යන්ත්‍ර සොයාගැනීමට.",
-        ],
-        a: 0,
-      },
-      {
-        q: "BOC Flex හි Payment Reminders පහසුකමේ අරමුණ කුමක්ද?",
-        o: [
-          "නියමිත ගෙවීම් මතක් කරදීමට.",
-          "ගිණුම ස්වයංක්‍රීයව වසා දැමීමට.",
-          "කාඩ්පත මුද්‍රණය කිරීමට.",
-          "ණය පොලී අනුපාත වෙනස් කිරීමට.",
         ],
         a: 0,
       },
@@ -1643,16 +1725,6 @@
         a: 0,
       },
       {
-        q: "ඔබගේ BOC Flex මුරපදය හෝ OTP අංකය වෙනත් අයෙකු ඉල්ලා සිටියහොත් කළ යුත්තේ කුමක්ද?",
-        o: [
-          "ඔවුන්ට ලබාදීම.",
-          "සමාජ මාධ්‍යයේ පළ කිරීම.",
-          "කිසිවෙකුට ලබා නොදී රහසිගතව තබාගැනීම.",
-          "මිතුරන් කිහිපදෙනෙකුට යැවීම.",
-        ],
-        a: 2,
-      },
-      {
         q: "BOC නමින් ලැබෙන සැක සහිත SMS සබැඳියක් (Link) පිළිබඳව කළ යුතු නිවැරදි ක්‍රියාව කුමක්ද?",
         o: [
           "වහාම විවෘත කර මුරපදය ඇතුළත් කිරීම.",
@@ -1683,9 +1755,9 @@
         a: 0,
       },
     ];
-    const TOTAL = 21,
+    const TOTAL = QUESTIONS.length,
       POINTS = 5,
-      MAX_SCORE = 100;
+      MAX_SCORE = TOTAL * POINTS;
 
     /* ---------- helpers ---------- */
     const $ = (s, r) => (r || document).querySelector(s);
@@ -1703,6 +1775,7 @@
       window.matchMedia &&
       matchMedia("(prefers-reduced-motion: reduce)").matches;
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const ck = (n) => "k" + ((n + Math.floor(n / 5)) % 5); // card colour, diagonal pattern in any column count
 
     const ICON = {
       check:
@@ -2325,12 +2398,12 @@
     })();
 
     /* ---------- state (saved in the browser when it allows) ---------- */
-    const KEY = "boc-flex-quiz-v1";
+    const KEY = "boc-flex-quiz-v2";
     let memState = null;
     function fresh(prefs) {
       return {
-        v: 1,
-        map: [-1].concat(shuffle(QUESTIONS.map((_, i) => i))),
+        v: 2,
+        map: shuffle(QUESTIONS.map((_, i) => i)),
         opened: {},
         music: prefs ? prefs.music : true,
         sfx: prefs ? prefs.sfx : true,
@@ -2347,14 +2420,13 @@
         s &&
         Array.isArray(s.map) &&
         s.map.length === TOTAL &&
-        s.map[0] === -1 &&
         s.map
-          .slice(1)
+          .slice()
           .sort((a, b) => a - b)
           .every((v, i) => v === i);
       if (
         s &&
-        s.v === 1 &&
+        s.v === 2 &&
         validMap &&
         s.opened &&
         typeof s.opened === "object"
@@ -2372,7 +2444,7 @@
 
     const score = () => {
       let c = 0;
-      for (let n = 1; n < TOTAL; n++) if (state.opened[n] === "correct") c++;
+      for (let n = 0; n < TOTAL; n++) if (state.opened[n] === "correct") c++;
       return c * POINTS;
     };
     const correctCount = () => score() / POINTS;
@@ -2423,23 +2495,18 @@
         b.style.setProperty("--i", n);
         b.className =
           "card " +
-          (n === 0 ? "kg" : "k" + (n % 5)) +
+          ck(n) +
           (st
             ? " done " +
               (st === "correct" ? "ok" : st === "wrong" ? "bad" : "seen")
             : "") +
           (n === stampN ? " stamp" : "");
-        b.setAttribute(
-          "aria-label",
-          "අංක " +
-            n +
-            (st ? " - විවෘත කර ඇත" : n === 0 ? " - පුහුණු ප්‍රශ්නය" : ""),
-        );
+        b.setAttribute("aria-label", "අංක " + n + (st ? " - විවෘත කර ඇත" : ""));
         b.innerHTML =
           '<span class="num">' +
           n +
           '</span><span class="tag">' +
-          (st ? "විවෘතයි" : n === 0 ? "පුහුණුව" : "ප්‍රශ්නය") +
+          (st ? "විවෘතයි" : "ප්‍රශ්නය") +
           "</span>" +
           '<span class="badge">' +
           (st === "correct"
@@ -2506,7 +2573,7 @@
     /* ---------- question ---------- */
     const LETTER_COLORS = ["#22c1f1", "#ff9a1f", "#9a6cff", "#ff5d8f"];
     function showQuestion(n, savedOrder) {
-      const q = n === 0 ? WARMUP : QUESTIONS[state.map[n]];
+      const q = QUESTIONS[state.map[n]];
       state.opened[n] = "seen";
       save();
       updateStats();
@@ -2516,9 +2583,9 @@
       save(); // lets the same question come back if the phone reloads the page
       const qn = $("#qnum");
       qn.textContent = n;
-      qn.className = "qnum " + (n === 0 ? "kg" : "k" + (n % 5));
-      $("#qlabel").textContent = n === 0 ? "පුහුණු ප්‍රශ්නය" : "ප්‍රශ්නය " + n;
-      $("#qpts").textContent = n === 0 ? "ලකුණු නැත" : "ලකුණු " + POINTS;
+      qn.className = "qnum " + ck(n);
+      $("#qlabel").textContent = "ප්‍රශ්නය " + n;
+      $("#qpts").textContent = "ලකුණු " + POINTS;
       $("#qtext").textContent = q.q;
       const opts = $("#opts");
       opts.innerHTML = "";
@@ -2587,7 +2654,7 @@
       state.opened[cur.n] = ok ? "correct" : "wrong";
       state.cur = null;
       save();
-      updateStats(ok && cur.n > 0);
+      updateStats(ok);
       Snd.click();
       if (ok) {
         later(() => {
@@ -2605,15 +2672,12 @@
     }
 
     function showResult(ok) {
-      const n = cur.n;
       $("#rcard").className = "rcard " + (ok ? "ok" : "bad");
       $("#rays").hidden = !ok;
       $("#rMascot").innerHTML = mascot(ok ? "happy" : "sad");
       $("#rTitle").textContent = ok ? "නිවැරදියි!" : "වැරදියි!";
       $("#rSub").textContent = ok
-        ? n === 0
-          ? "පුහුණු ප්‍රශ්නය නිවැරදියි! දැන් සැබෑ ප්‍රශ්නවලට සූදානම්."
-          : "ඉතා හොඳයි! ලකුණු " + POINTS + "ක් ලැබුණා."
+        ? "ඉතා හොඳයි! ලකුණු " + POINTS + "ක් ලැබුණා."
         : "කමක් නැහැ, ඊළඟ වතාවේ උත්සාහ කරමු.";
       $("#rAnswer").hidden = ok;
       if (!ok) $("#rAnswerTxt").textContent = cur.q.o[cur.q.a];
@@ -2645,9 +2709,11 @@
     /* ---------- finale ---------- */
     function showFinale() {
       const sc = score(),
-        cc = correctCount();
-      const stars = sc >= 80 ? 3 : sc >= 50 ? 2 : sc > 0 ? 1 : 0;
-      $("#fMascot").innerHTML = mascot(sc >= 30 ? "happy" : "sad");
+        cc = correctCount(),
+        pct = (sc / MAX_SCORE) * 100;
+      $("#fMax").textContent = MAX_SCORE;
+      const stars = pct >= 80 ? 3 : pct >= 50 ? 2 : sc > 0 ? 1 : 0;
+      $("#fMascot").innerHTML = mascot(pct >= 30 ? "happy" : "sad");
       $("#fStars").innerHTML = [0, 1, 2]
         .map(
           (i) =>
@@ -2662,11 +2728,11 @@
             "</span>",
         )
         .join("");
-      $("#fCorrect").textContent = "නිවැරදි පිළිතුරු " + cc + " / 20";
+      $("#fCorrect").textContent = "නිවැරදි පිළිතුරු " + cc + " / " + TOTAL;
       $("#fMsg").textContent =
-        sc >= 80
-          ? "විශිෂ්ටයි! ඔබ සැබෑ ඩිජිටල් බැංකු විශේෂඥයෙක්!"
-          : sc >= 50
+        pct >= 80
+          ? "විශිෂ්ටයි! ඔබ සැබෑ ප්‍රශ්න ශූරයෙක්!"
+          : pct >= 50
             ? "ඉතා හොඳයි! තව ටිකක් උත්සාහ කළොත් සම්පූර්ණ ලකුණු ලබාගත හැක."
             : "හොඳ උත්සාහයක්! නැවත සෙල්ලම් කර තවත් ලකුණු ලබාගන්න.";
       // count up
@@ -2681,7 +2747,7 @@
         out.textContent = v;
         if (v >= end) clearInterval(finaleIv);
       }, 70);
-      if (sc >= 30) {
+      if (pct >= 30) {
         Snd.fanfare(true);
         FX.celebrate(true);
       } else {
