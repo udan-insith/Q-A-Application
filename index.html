@@ -236,6 +236,7 @@
   .coach li.done { opacity: .6; }
 
   /* countdown timer */
+  #quiz.notimer .timerwrap { display: none; }
   .timerwrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 24px; }
   .timer {
     --tc: var(--green);
@@ -451,6 +452,9 @@
       <div class="chip" id="scoreChip" title="ලකුණු">ලකුණු <b id="score">0</b></div>
       <button class="iconbtn" id="musicBtn" type="button" aria-pressed="true" aria-label="සංගීතය" title="සංගීතය">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="3"/><circle cx="17.5" cy="16" r="3"/></svg>
+      </button>
+      <button class="iconbtn" id="timerToggle" type="button" aria-pressed="true" aria-label="ටයිමරය" title="ටයිමරය">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4.2l2.6 1.6"/><path d="M9.5 2.8h5M12 2.8v3.2"/></svg>
       </button>
       <button class="iconbtn" id="sfxBtn" type="button" aria-pressed="true" aria-label="ශබ්ද ඵල" title="ශබ්ද ඵල">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
@@ -882,7 +886,7 @@
   const KEY = 'boc-flex-quiz-v3';
   let memState = null;
   function fresh(prefs) {
-    return { v: 3, map: [-1].concat(shuffle(QUESTIONS.map((_, i) => i))), opened: {}, music: prefs ? prefs.music : true, sfx: prefs ? prefs.sfx : true };
+    return { v: 3, map: [-1].concat(shuffle(QUESTIONS.map((_, i) => i))), opened: {}, music: prefs ? prefs.music : true, sfx: prefs ? prefs.sfx : true, timer: prefs ? prefs.timer !== false : true };
   }
   function load() {
     let s = null;
@@ -895,6 +899,7 @@
   let state = load() || fresh();
   function save() { memState = state; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
+  const timerOn = () => state.timer !== false;
   const score = () => { let c = 0; for (let n = 1; n < TOTAL; n++) if (state.opened[n] === 'correct') c++; return c * POINTS; };
   const correctCount = () => score() / POINTS;
   const openedCount = () => Object.keys(state.opened).filter(k => k !== '0').length;
@@ -956,6 +961,11 @@
   const optsEl = $('#opts'), coachEl = $('#coach'), timerBtn = $('#timerBtn'), timerNum = $('#timerNum'), timerCap = $('#timerCap'), ringP = $('#ringP');
   let timerIv = 0;
   function stopTimer() { clearInterval(timerIv); timerIv = 0; }
+  function coachText() { // the practice guide follows the timer switch
+    const t = coachEl.querySelectorAll('span');
+    t[1].textContent = timerOn() ? 'ටයිමරය ස්වයංක්‍රීයව ආරම්භ වේ.' : 'ටයිමරය අක්‍රියයි — කාල සීමාවක් නැත.';
+    t[2].textContent = timerOn() ? 'තත්පර ' + TIME_LIMIT + 'ක් ඇතුළත නිවැරදි පිළිතුර තෝරන්න.' : 'නිවැරදි පිළිතුර තෝරන්න.';
+  }
   function coach(step) { // highlights the current step of the practice guide
     [].forEach.call(coachEl.children, (li, i) => { li.classList.toggle('on', i === step); li.classList.toggle('done', i < step); });
   }
@@ -979,7 +989,8 @@
     $('#qlabel').textContent = practice ? 'පුහුණු ප්‍රශ්නය' : 'ප්‍රශ්නය ' + n;
     $('#qpts').textContent = practice ? 'ලකුණු නැත' : 'ලකුණු ' + POINTS;
     $('#qtext').textContent = q.q;
-    coachEl.hidden = !practice; if (practice) coach(0);
+    coachEl.hidden = !practice; if (practice) { coachText(); coach(0); }
+    quiz.classList.toggle('notimer', !timerOn());
     optsEl.innerHTML = ''; optsEl.classList.add('pre'); // answers unlock when the timer starts
     cur.order.forEach((oi, k) => {
       const b = document.createElement('button');
@@ -1000,6 +1011,7 @@
   function startTimer(fromReload) {
     if (!cur || cur.started || cur.answered) return;
     cur.started = true;
+    if (!timerOn()) { optsEl.classList.remove('pre'); coach(2); return; } // timer switched off: no countdown, answers open straight away
     if (!cur.t0) cur.t0 = Date.now();
     if (cur.n > 0 && state.cur) { state.cur.t0 = cur.t0; save(); }
     optsEl.classList.remove('pre');
@@ -1118,7 +1130,7 @@
   function resetGame() {
     clearLater(); stopTimer(); clearInterval(finaleIv); busy = false;
     resultEl.hidden = true; finaleEl.hidden = true; $('#rain').classList.remove('on');
-    state = fresh({ music: state.music, sfx: state.sfx }); save();
+    state = fresh({ music: state.music, sfx: state.sfx, timer: state.timer }); save();
     quiz.hidden = true; home.hidden = false; cur = null;
     board.classList.add('intro'); renderBoard(); updateStats(); scrollTo(0, 0);
   }
@@ -1130,8 +1142,21 @@
   function syncToggles() {
     $('#musicBtn').setAttribute('aria-pressed', String(state.music));
     $('#sfxBtn').setAttribute('aria-pressed', String(state.sfx));
+    $('#timerToggle').setAttribute('aria-pressed', String(timerOn()));
+    quiz.classList.toggle('notimer', !timerOn());
   }
   $('#musicBtn').addEventListener('click', () => { state.music = !state.music; save(); syncToggles(); Snd.setMusic(state.music); Snd.click(); });
+  $('#timerToggle').addEventListener('click', () => {
+    Snd.click(); state.timer = !timerOn(); save(); syncToggles();
+    if (!cur || quiz.hidden || cur.answered) return; // takes effect on this question if it is still open, otherwise from the next one
+    stopTimer(); cur.t0 = 0; ringP.style.animation = 'none';
+    if (state.cur && cur.n > 0) { state.cur.t0 = 0; save(); }
+    if (cur.started) { // already open: switch the countdown on (fresh 30 s) or off (answers stay open)
+      if (timerOn()) { cur.started = false; timerBtn.className = 'timer run t-ok'; timerNum.textContent = TIME_LIMIT; startTimer(false); }
+      else optsEl.classList.remove('pre');
+    }
+    if (!coachEl.hidden) { coachText(); coach(cur.started ? 2 : 0); }
+  });
   $('#sfxBtn').addEventListener('click', () => { Snd.click(); state.sfx = !state.sfx; save(); syncToggles(); Snd.setSfx(state.sfx); if (state.sfx) Snd.click(); });
   // keep the screen awake during a quiz (ignored where unsupported)
   let wake = null;
